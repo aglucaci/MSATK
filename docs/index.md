@@ -1,5 +1,7 @@
 # MSATK
 
+![MSATK logo](assets/msatk_logo.png)
+
 MSATK is a Python and command-line toolkit for profiling multiple sequence alignments. It turns nucleotide, protein, and codon-aware alignments into QC summaries, per-sequence and per-site statistics, plots, codon/protein summaries, and shareable reports.
 
 ```bash

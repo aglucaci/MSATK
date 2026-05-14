@@ -1,5 +1,9 @@
 # MSATK
 
+<p align="center">
+  <img src="logo/msatk_logo.png" alt="MSATK logo" width="220">
+</p>
+
 ![Tests](https://github.com/yourname/msatk/actions/workflows/tests.yml/badge.svg)
 ![Docs](https://github.com/yourname/msatk/actions/workflows/docs.yml/badge.svg)
 ![PyPI](https://img.shields.io/pypi/v/msatk)
@@ -13,7 +17,7 @@
 ## Quick Start
 
 ```bash
-pip install msatk
+mamba install -c bioconda -c conda-forge msatk
 msatk profile alignment.fasta
 ```
 
@@ -21,19 +25,115 @@ MSATK automatically detects the input format and molecule type, computes summary
 
 ```text
 alignment_msatk/
-├── report.html
-├── summary.json
-├── parameters.yaml
-├── msatk.log
-├── qc_warnings.txt
-├── tables/
-└── figures/
+|-- report.html
+|-- summary.json
+|-- parameters.yaml
+|-- msatk.log
+|-- qc_warnings.txt
+|-- tables/
+`-- figures/
 ```
 
 Try the bundled demo:
 
 ```bash
 msatk demo
+```
+
+## Installation
+
+### With Conda
+
+The recommended bioinformatics-native install path is Bioconda:
+
+```bash
+mamba install -c bioconda -c conda-forge msatk
+```
+
+or:
+
+```bash
+conda install -c bioconda -c conda-forge msatk
+```
+
+Before the official Bioconda package is available, create an environment with Conda-managed dependencies and install MSATK from PyPI:
+
+```bash
+conda env create -f environment.yml
+conda activate msatk
+```
+
+After Bioconda packaging is live, use:
+
+```bash
+conda env create -f environment-bioconda.yml
+conda activate msatk
+```
+
+### With pip
+
+```bash
+pip install msatk
+```
+
+### Development install
+
+```bash
+git clone https://github.com/yourname/msatk
+cd msatk
+pip install -e ".[dev,all,docs]"
+```
+
+## How To Run Locally
+
+From the repository root:
+
+```bash
+pip install -e ".[dev,all,docs]"
+```
+
+Run the bundled demo:
+
+```bash
+msatk demo --out msatk_demo --force
+```
+
+Profile your own alignment:
+
+```bash
+msatk profile path/to/alignment.fasta
+```
+
+Write to a specific output directory:
+
+```bash
+msatk profile path/to/alignment.fasta --out results --force
+```
+
+Run codon-aware or protein-specific modes:
+
+```bash
+msatk codon path/to/cds_alignment.fasta --out codon_results --force
+msatk protein path/to/protein_alignment.faa --out protein_results --force
+```
+
+Run tests and checks:
+
+```bash
+pytest
+ruff check src/msatk tests
+ruff format --check src/msatk tests
+mkdocs build --strict
+```
+
+If you are running without installing the package, set `PYTHONPATH` first:
+
+```bash
+# macOS/Linux
+PYTHONPATH=src python -m msatk.cli demo --out msatk_demo --force
+
+# Windows PowerShell
+$env:PYTHONPATH="src"; python -m msatk.cli demo --out msatk_demo --force
 ```
 
 ## Why MSATK?
@@ -67,6 +167,41 @@ Developer install:
 ```bash
 pip install -e ".[dev,all]"
 ```
+
+## Conda And Bioconda Packaging
+
+MSATK is intended to be distributed through PyPI first, then Bioconda:
+
+```text
+PyPI first -> local Conda recipe -> Bioconda PR -> CI-tested Conda builds
+```
+
+The local Conda recipe is in:
+
+```text
+conda-recipe/meta.yaml
+```
+
+Build and test it locally:
+
+```bash
+mamba create -n conda-build-env -c conda-forge conda-build boa anaconda-client
+conda activate conda-build-env
+conda build conda-recipe
+
+mamba create -n test-msatk --use-local msatk
+conda activate test-msatk
+msatk --help
+msatk profile --help
+```
+
+For Bioconda submission after a PyPI release, use:
+
+```text
+conda-recipe/meta.bioconda.yaml
+```
+
+Update the PyPI source SHA256, copy it to `recipes/msatk/meta.yaml` in a fork of `bioconda/bioconda-recipes`, and open a pull request.
 
 ## CLI
 

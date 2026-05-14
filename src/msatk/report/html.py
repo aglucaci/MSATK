@@ -48,6 +48,8 @@ def render_html_report(
     :root {{ color-scheme: light; --ink: #17202a; --muted: #5b6773; --line: #d8dee6; --brand: #0f766e; --wash: #f6faf9; --alert: #9a3412; }}
     body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: #fff; }}
     header {{ padding: 34px 40px; background: var(--wash); border-bottom: 1px solid var(--line); }}
+    .masthead {{ display: flex; align-items: center; gap: 18px; }}
+    .logo {{ width: 82px; height: 82px; object-fit: contain; flex: 0 0 auto; }}
     main {{ max-width: 1160px; margin: 0 auto; padding: 28px 24px 48px; }}
     h1 {{ margin: 0 0 6px; font-size: 34px; letter-spacing: 0; }}
     h2 {{ margin-top: 34px; font-size: 20px; }}
@@ -74,9 +76,14 @@ def render_html_report(
 </head>
 <body>
   <header>
-    <div class="brand">MSATK</div>
-    <h1>{escape(title)}</h1>
-    <p class="subtitle">One command to profile, visualize, and report multiple sequence alignments.</p>
+    <div class="masthead">
+      <img class="logo" src="assets/msatk_logo.png" alt="MSATK logo">
+      <div>
+        <div class="brand">MSATK</div>
+        <h1>{escape(title)}</h1>
+        <p class="subtitle">One command to profile, visualize, and report multiple sequence alignments.</p>
+      </div>
+    </div>
   </header>
   <main>
     <section>

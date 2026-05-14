@@ -1,0 +1,6 @@
+name: msatk
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - msatk

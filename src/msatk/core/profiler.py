@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import platform
+import shutil
 import sys
 from datetime import datetime, timezone
+from importlib import resources
 from pathlib import Path
 
 from msatk.core.detect import normalize_requested_type
@@ -159,8 +161,10 @@ class AlignmentProfiler:
         out = self._resolve_outdir(outdir, force=force)
         tables_dir = out / "tables"
         figures_dir = out / "figures"
+        assets_dir = out / "assets"
         for directory in (tables_dir, figures_dir):
             directory.mkdir(parents=True, exist_ok=True)
+        self._write_report_assets(assets_dir)
 
         base_summary = self.summary()
         seq_rows = self._rows(self.per_sequence_stats())
@@ -295,6 +299,12 @@ class AlignmentProfiler:
             write_csv(
                 tables_dir / "hydrophobicity_summary.csv", hydrophobicity_summary(self.alignment)
             )
+
+    def _write_report_assets(self, assets_dir: Path) -> None:
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        logo = resources.files("msatk.assets").joinpath("msatk_logo.png")
+        with resources.as_file(logo) as logo_path:
+            shutil.copyfile(logo_path, assets_dir / "msatk_logo.png")
 
     def _qc_flag_rows(
         self,

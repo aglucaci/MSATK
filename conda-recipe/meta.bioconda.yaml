@@ -1,0 +1,57 @@
+{% set name = "msatk" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.io/packages/source/m/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: REPLACE_WITH_PYPI_SDIST_SHA256
+
+build:
+  noarch: python
+  number: 0
+  script: "{{ PYTHON }} -m pip install . -vv"
+  entry_points:
+    - msatk = msatk.cli:main
+
+requirements:
+  host:
+    - python >=3.10
+    - pip
+    - hatchling
+  run:
+    - python >=3.10
+    - biopython
+    - pandas
+    - numpy
+    - scipy
+    - matplotlib-base
+    - jinja2
+    - typer
+    - rich
+    - pydantic
+
+test:
+  imports:
+    - msatk
+  commands:
+    - msatk --help
+    - msatk profile --help
+
+about:
+  home: https://github.com/yourname/msatk
+  license: MIT
+  license_file: LICENSE
+  summary: Multiple Sequence Alignment Toolkit for statistics, QC, plots, codon summaries, and reports.
+  description: |
+    MSATK is a command-line and Python toolkit for profiling multiple sequence
+    alignments. It converts nucleotide, protein, and codon-aware alignments into
+    quality-control summaries, per-sequence and per-site statistics,
+    publication-ready plots, codon usage metrics, RSCU tables, and standalone
+    HTML reports.
+
+extra:
+  recipe-maintainers:
+    - aglucaci

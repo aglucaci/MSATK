@@ -15,6 +15,8 @@ def render_markdown_report(
     lines = [
         "# MSATK Alignment Report",
         "",
+        "![MSATK logo](assets/msatk_logo.png)",
+        "",
         "One command to profile, visualize, and report multiple sequence alignments.",
         "",
         "## Executive Summary",

@@ -1,6 +1,9 @@
 # Quickstart
 
+![MSATK logo](assets/msatk_logo.png)
+
 ```bash
+mamba install -c bioconda -c conda-forge msatk
 msatk profile alignment.fasta
 ```
 

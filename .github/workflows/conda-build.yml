@@ -1,0 +1,37 @@
+name: Conda Build
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  conda-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: conda-build-env
+          create-args: >-
+            conda-build
+            boa
+            anaconda-client
+            conda-forge::python=3.11
+
+      - name: Build Conda package
+        shell: bash -l {0}
+        run: conda build conda-recipe
+
+      - name: Test local Conda install
+        shell: bash -l {0}
+        run: |
+          mamba create -n test-msatk --use-local msatk -y
+          conda activate test-msatk
+          msatk --help
+          msatk profile --help
+          msatk demo --out msatk_conda_demo --force

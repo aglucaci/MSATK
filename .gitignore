@@ -11,6 +11,8 @@ build/
 htmlcov/
 site/
 msatk_results/
+msatk_demo/
+*_msatk/
 results/
 .venv/
 venv/

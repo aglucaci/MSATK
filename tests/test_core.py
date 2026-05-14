@@ -57,6 +57,7 @@ def test_write_outputs(tmp_path):
     assert (tmp_path / "report.html").exists()
     assert (tmp_path / "qc_warnings.txt").exists()
     assert (tmp_path / "summary.json").exists()
+    assert (tmp_path / "assets" / "msatk_logo.png").exists()
 
 
 def _rows(value):

@@ -45,6 +45,35 @@ Please include unit tests, integration tests for CLI behavior, documentation upd
 
 Test data should be small, synthetic, deterministic, documented, and placed under `tests/data/`. Do not add large biological datasets directly to the repository.
 
+## Conda Packaging
+
+MSATK is intended to be installable through PyPI and Conda/Bioconda.
+
+To test the local Conda recipe:
+
+```bash
+mamba create -n conda-build-env -c conda-forge conda-build boa anaconda-client
+conda activate conda-build-env
+conda build conda-recipe
+```
+
+Then test installation:
+
+```bash
+mamba create -n test-msatk --use-local msatk
+conda activate test-msatk
+msatk --help
+msatk profile --help
+```
+
+When preparing a release, update:
+
+- `pyproject.toml`
+- `CHANGELOG.md`
+- `conda-recipe/meta.yaml`
+- `conda-recipe/meta.bioconda.yaml`
+- package SHA256 after PyPI upload
+
 ## Pull Request Checklist
 
 - [ ] Tests pass locally
