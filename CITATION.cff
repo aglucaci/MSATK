@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use MSATK, please cite it using this metadata."
+title: "MSATK: Multiple Sequence Alignment Toolkit"
+version: 0.1.0
+date-released: 2026-05-14
+authors:
+  - family-names: Lucaci
+    given-names: Alexander
+license: MIT
+abstract: "MSATK provides a reproducible command-line and Python framework for summarizing, validating, visualizing, and reporting multiple sequence alignments across nucleotide, protein, and codon-aware use cases."

@@ -1,0 +1,17 @@
+site_name: MSATK
+site_description: Multiple Sequence Alignment Toolkit
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quickstart: quickstart.md
+  - CLI: CLI.md
+  - Python API: python_api.md
+  - Outputs: outputs.md
+  - QC Warnings: qc_warnings.md
+  - Workflow Integration: workflow_integration.md
+  - Test Datasets: test_datasets.md
+  - Contributing: contributing.md
+  - Release Checklist: release_checklist.md
+  - Roadmap: ROADMAP.md
