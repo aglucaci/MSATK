@@ -25,3 +25,23 @@ Try the bundled example:
 ```bash
 msatk demo
 ```
+
+Common alignment formats are detected automatically:
+
+```bash
+msatk profile alignment.fasta
+msatk profile alignment.phy
+msatk profile alignment.aln
+msatk profile alignment.sto
+msatk profile alignment.nex
+msatk profile alignment.maf
+msatk profile reads.sam
+msatk profile reads.bam
+msatk profile reads.cram
+```
+
+BAM/CRAM support requires `pysam`:
+
+```bash
+pip install "msatk[ngs]"
+```

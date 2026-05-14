@@ -28,7 +28,7 @@ from msatk.report import render_html_report, render_markdown_report
 from msatk.version import __version__
 
 
-class AlignmentProfiler:
+class MSATK:
     """Unified MSATK profiling engine for CLI and Python usage."""
 
     def __init__(
@@ -340,3 +340,6 @@ class AlignmentProfiler:
         if hasattr(value, "to_dict"):
             return value.to_dict(orient="records")  # type: ignore[no-any-return,call-arg]
         return value  # type: ignore[return-value]
+
+
+AlignmentProfiler = MSATK

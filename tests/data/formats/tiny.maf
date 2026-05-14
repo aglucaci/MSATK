@@ -1,0 +1,6 @@
+##maf version=1
+
+a score=0
+s seq1 0 10 + 10 ATGCTAGCTA
+s seq2 0 10 + 10 ATGCTAGTTA
+s seq3 0 10 + 10 ATG-TAGCTA

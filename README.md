@@ -140,6 +140,7 @@ $env:PYTHONPATH="src"; python -m msatk.cli demo --out msatk_demo --force
 
 - One-command alignment profiling
 - DNA, RNA, protein, and codon-aware modes
+- Common alignment inputs: FASTA/aligned FASTA, A3M, PHYLIP/relaxed PHYLIP, CLUSTAL, Stockholm, NEXUS, MAF, SAM, BAM, and CRAM
 - Publication-ready PNG plots with optional plotting dependencies
 - CSV, JSON, HTML, and Markdown outputs
 - Codon usage, RSCU, GC1/GC2/GC3, and stop codon summaries
@@ -147,6 +148,42 @@ $env:PYTHONPATH="src"; python -m msatk.cli demo --out msatk_demo --force
 - QC warnings with plain-language interpretation
 - Python API for notebooks and workflows
 - Stable output files for Snakemake, Nextflow, and HPC pipelines
+
+## Supported Input Types
+
+Core formats:
+
+- FASTA
+- aligned FASTA
+- PHYLIP
+- relaxed PHYLIP
+- NEXUS
+- CLUSTAL
+- Stockholm
+- A3M
+- MAF
+- SAM
+- BAM/CRAM-derived alignment summaries
+
+Sequence types:
+
+- nucleotide alignments
+- amino-acid alignments
+- codon alignments
+- translated CDS alignments
+- mixed or auto-detected mode
+
+MSATK automatically infers:
+
+- file format
+- molecule type: DNA, RNA, protein, codon, translated CDS, or mixed
+- alignment length
+- whether sequence lengths are consistent
+- whether stop codons exist
+- whether frameshift warnings are present
+- whether the alignment appears codon-aware
+
+These fields are written to `summary.json`, `tables/alignment_summary.csv`, and the HTML report.
 
 ## Install Extras
 
@@ -160,7 +197,10 @@ Useful extras:
 pip install "msatk[dataframes]"
 pip install "msatk[plots]"
 pip install "msatk[embed]"
+pip install "msatk[ngs]"
 ```
+
+`SAM` is supported without extra dependencies. `BAM` and `CRAM` require `pysam`; install with `pip install "msatk[ngs]"` or `mamba install -c conda-forge pysam`.
 
 Developer install:
 
@@ -237,9 +277,9 @@ alignment_msatk/report.html
 ## Python API
 
 ```python
-from msatk import AlignmentProfiler, CodonProfiler, ProteinProfiler, profile_alignment
+from msatk import MSATK, CodonProfiler, ProteinProfiler, profile_alignment
 
-profiler = AlignmentProfiler("alignment.fasta")
+profiler = MSATK("alignment.fasta")
 summary = profiler.summary()
 per_sequence = profiler.per_sequence_stats()
 per_site = profiler.per_site_stats()
@@ -255,6 +295,14 @@ rscu = codon.rscu()
 
 protein = ProteinProfiler("protein_alignment.faa")
 aa = protein.amino_acid_composition()
+```
+
+Lowercase alias is also supported:
+
+```python
+from msatk import msatk
+
+profiler = msatk("alignment.fasta")
 ```
 
 When pandas is installed, table-like API methods return pandas DataFrames. In minimal environments, MSATK falls back to lists of dictionaries.

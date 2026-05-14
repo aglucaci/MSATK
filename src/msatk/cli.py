@@ -10,7 +10,7 @@ from pathlib import Path
 
 from msatk import __version__
 from msatk.codon import CodonProfiler
-from msatk.core import AlignmentProfiler
+from msatk.core import MSATK
 from msatk.io import write_csv
 from msatk.protein import ProteinProfiler
 from msatk.report import render_html_report, render_markdown_report
@@ -38,7 +38,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_input_output(profile)
     profile.add_argument(
-        "--type", default="auto", choices=["auto", "dna", "rna", "protein", "codon", "mixed"]
+        "--type",
+        default="auto",
+        choices=["auto", "dna", "rna", "protein", "codon", "translated_cds", "mixed"],
     )
     profile.add_argument("--format", default="auto", help="Input format; default auto.")
     profile.add_argument(
@@ -121,7 +123,7 @@ def _add_input_output(parser: argparse.ArgumentParser) -> None:
 def cmd_profile(args: argparse.Namespace) -> int:
     try:
         validation_mode = "strict" if args.strict else "permissive"
-        profiler = AlignmentProfiler(
+        profiler = MSATK(
             args.input, sequence_type=args.type, fmt=args.format, validation_mode=validation_mode
         )
         tables = not args.plots_only
@@ -146,7 +148,7 @@ def cmd_profile(args: argparse.Namespace) -> int:
 
 
 def cmd_qc(args: argparse.Namespace) -> int:
-    profiler = AlignmentProfiler(args.input, sequence_type=args.type)
+    profiler = MSATK(args.input, sequence_type=args.type)
     out = profiler._resolve_outdir(args.out, force=args.force)
     out.mkdir(parents=True, exist_ok=True)
     seq_rows = profiler._rows(profiler.per_sequence_stats())
@@ -182,7 +184,7 @@ def cmd_protein(args: argparse.Namespace) -> int:
 
 
 def cmd_embed(args: argparse.Namespace) -> int:
-    profiler = AlignmentProfiler(args.input)
+    profiler = MSATK(args.input)
     out = profiler._resolve_outdir(args.out, force=args.force)
     out.mkdir(parents=True, exist_ok=True)
     write_csv(
@@ -241,7 +243,7 @@ def cmd_demo(args: argparse.Namespace) -> int:
         shutil.rmtree(out)
     source = resources.files("msatk.data.example_alignments").joinpath("demo_codon.fasta")
     with resources.as_file(source) as demo_path:
-        profiler = AlignmentProfiler(demo_path)
+        profiler = MSATK(demo_path)
         result = profiler.write_outputs(outdir=out, force=args.force, command="msatk demo")
     _print_done(result)
     return 0

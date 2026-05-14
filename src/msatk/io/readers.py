@@ -12,13 +12,16 @@ from msatk.models import Alignment, SequenceRecord
 def read_alignment(
     path: str | Path, fmt: str = "auto", validation_mode: str = "permissive"
 ) -> Alignment:
-    """Read an alignment from FASTA/A3M, PHYLIP, CLUSTAL, Stockholm, or NEXUS."""
+    """Read common MSA formats plus SAM/BAM/CRAM-derived alignments."""
 
     source = Path(path)
-    text = source.read_text(encoding="utf-8")
-    if not text.strip():
-        raise AlignmentFormatError(f"MSATK could not read {source}: the file is empty.")
-    detected = detect_format(text, source) if fmt == "auto" else fmt.lower()
+    detected = _detect_binary_format(source) if fmt == "auto" else fmt.lower()
+    text = ""
+    if detected not in {"bam", "cram"}:
+        text = source.read_text(encoding="utf-8")
+        if not text.strip():
+            raise AlignmentFormatError(f"MSATK could not read {source}: the file is empty.")
+        detected = detect_format(text, source) if fmt == "auto" else detected
     if detected in {"fasta", "fa", "faa", "fna", "a3m"}:
         records = _read_fasta(text, keep_lower=detected != "a3m")
     elif detected in {"phylip", "phy"}:
@@ -29,6 +32,12 @@ def read_alignment(
         records = _read_stockholm(text)
     elif detected in {"nexus", "nex"}:
         records = _read_nexus(text)
+    elif detected == "maf":
+        records = _read_maf(text)
+    elif detected == "sam":
+        records = _read_sam(text)
+    elif detected in {"bam", "cram"}:
+        records = _read_bam_cram(source, detected)
     else:
         raise AlignmentFormatError(f"Unsupported alignment format: {fmt}")
     alignment = Alignment(tuple(records), source=str(source), fmt=detected)
@@ -39,6 +48,8 @@ def read_alignment(
 def detect_format(text: str, path: Path | None = None) -> str:
     stripped = text.lstrip()
     suffix = path.suffix.lower().lstrip(".") if path else ""
+    if suffix in {"bam", "cram", "sam", "maf"}:
+        return suffix
     if stripped.startswith(">"):
         return "a3m" if suffix == "a3m" else "fasta"
     first = stripped.splitlines()[0].strip() if stripped else ""
@@ -49,9 +60,13 @@ def detect_format(text: str, path: Path | None = None) -> str:
         return "stockholm"
     if upper.startswith("#NEXUS") or stripped.upper().startswith("BEGIN DATA"):
         return "nexus"
+    if stripped.startswith("a ") and "\ns " in stripped:
+        return "maf"
+    if upper.startswith("@HD") or upper.startswith("@SQ") or _looks_sam(first):
+        return "sam"
     if suffix in {"phy", "phylip"} or _looks_phylip(first):
         return "phylip"
-    if suffix in {"fa", "fasta", "faa", "fna", "a3m", "aln", "sto", "nex"}:
+    if suffix in {"fa", "fasta", "faa", "fna", "a3m", "aln", "sto", "nex", "maf", "sam"}:
         return {
             "fa": "fasta",
             "faa": "fasta",
@@ -63,9 +78,19 @@ def detect_format(text: str, path: Path | None = None) -> str:
     raise AlignmentFormatError("Could not auto-detect alignment format.")
 
 
+def _detect_binary_format(path: Path) -> str:
+    suffix = path.suffix.lower().lstrip(".")
+    return suffix if suffix in {"bam", "cram"} else "auto"
+
+
 def _looks_phylip(first_line: str) -> bool:
     parts = first_line.split()
     return len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit()
+
+
+def _looks_sam(first_line: str) -> bool:
+    parts = first_line.split("\t")
+    return len(parts) >= 11 and parts[1].isdigit() and parts[3].isdigit()
 
 
 def _read_fasta(text: str, keep_lower: bool = True) -> list[SequenceRecord]:
@@ -180,3 +205,121 @@ def _read_nexus(text: str) -> list[SequenceRecord]:
     if not records:
         raise AlignmentFormatError("No NEXUS matrix records found.")
     return records
+
+
+def _read_maf(text: str) -> list[SequenceRecord]:
+    chunks: dict[str, list[str]] = {}
+    block_ids: list[str] = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("a "):
+            block_ids = []
+            continue
+        if line.startswith("s "):
+            parts = line.split()
+            if len(parts) < 7:
+                raise AlignmentFormatError("Invalid MAF sequence line.")
+            seq_id = parts[1]
+            seq = parts[6].upper()
+            block_ids.append(seq_id)
+            chunks.setdefault(seq_id, []).append(seq)
+    if not chunks:
+        raise AlignmentFormatError("No MAF alignment records found.")
+    return [SequenceRecord(seq_id, "".join(parts), seq_id) for seq_id, parts in chunks.items()]
+
+
+def _read_sam(text: str) -> list[SequenceRecord]:
+    rows: list[tuple[str, int, str]] = []
+    for raw in text.splitlines():
+        if not raw.strip() or raw.startswith("@"):
+            continue
+        parts = raw.rstrip().split("\t")
+        if len(parts) < 11:
+            continue
+        read_id = parts[0]
+        pos = int(parts[3])
+        cigar = parts[5]
+        seq = parts[9]
+        if cigar == "*" or seq == "*":
+            continue
+        rows.append((read_id, pos, _sequence_from_cigar(seq, cigar)))
+    return _records_from_reference_offsets(rows, source_name="SAM")
+
+
+def _read_bam_cram(path: Path, fmt: str) -> list[SequenceRecord]:
+    try:
+        import pysam  # type: ignore
+    except Exception as exc:
+        raise AlignmentFormatError(
+            "BAM/CRAM input requires the optional 'pysam' dependency. "
+            "Install it with conda (`mamba install -c conda-forge pysam`) or pip (`pip install pysam`)."
+        ) from exc
+
+    mode = "rc" if fmt == "cram" else "rb"
+    rows: list[tuple[str, int, str]] = []
+    try:
+        with pysam.AlignmentFile(str(path), mode) as handle:
+            for read in handle.fetch(until_eof=True):
+                if read.is_unmapped or read.query_sequence is None or read.cigartuples is None:
+                    continue
+                seq = _sequence_from_pysam_cigar(read.query_sequence, read.cigartuples)
+                rows.append((read.query_name, int(read.reference_start) + 1, seq))
+    except Exception as exc:
+        raise AlignmentFormatError(
+            f"MSATK could not read {fmt.upper()} file {path}: {exc}"
+        ) from exc
+    return _records_from_reference_offsets(rows, source_name=fmt.upper())
+
+
+def _records_from_reference_offsets(
+    rows: list[tuple[str, int, str]], source_name: str
+) -> list[SequenceRecord]:
+    if not rows:
+        raise AlignmentFormatError(
+            f"No mapped reads or alignment records found in {source_name} input."
+        )
+    min_pos = min(pos for _, pos, _ in rows)
+    records = []
+    seen: dict[str, int] = {}
+    for read_id, pos, seq in rows:
+        seen[read_id] = seen.get(read_id, 0) + 1
+        unique_id = read_id if seen[read_id] == 1 else f"{read_id}_{seen[read_id]}"
+        records.append(SequenceRecord(unique_id, "-" * (pos - min_pos) + seq.upper(), unique_id))
+    return records
+
+
+def _sequence_from_cigar(sequence: str, cigar: str) -> str:
+    import re
+
+    pieces: list[str] = []
+    query_index = 0
+    for length_text, op in re.findall(r"(\d+)([MIDNSHP=X])", cigar):
+        length = int(length_text)
+        if op in {"M", "=", "X", "I"}:
+            pieces.append(sequence[query_index : query_index + length])
+            query_index += length
+        elif op in {"D", "N"}:
+            pieces.append("-" * length)
+        elif op == "S":
+            query_index += length
+        elif op in {"H", "P"}:
+            continue
+    return "".join(pieces)
+
+
+def _sequence_from_pysam_cigar(sequence: str, cigartuples: list[tuple[int, int]]) -> str:
+    pieces: list[str] = []
+    query_index = 0
+    for op, length in cigartuples:
+        if op in {0, 1, 7, 8}:  # M, I, =, X
+            pieces.append(sequence[query_index : query_index + length])
+            query_index += length
+        elif op in {2, 3}:  # deletion or skipped region
+            pieces.append("-" * length)
+        elif op == 4:  # soft clip
+            query_index += length
+        elif op in {5, 6}:  # hard clip or padding
+            continue
+    return "".join(pieces)

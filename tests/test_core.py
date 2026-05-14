@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from msatk import AlignmentProfiler, CodonProfiler, ProteinProfiler
+from msatk import MSATK, AlignmentProfiler, CodonProfiler, ProteinProfiler, msatk
 from msatk.io import read_alignment
 
 DATA = Path(__file__).parent / "data"
@@ -10,16 +10,23 @@ def test_read_fasta_and_summary():
     alignment = read_alignment(DATA / "dna.fasta")
     assert alignment.n_sequences == 3
     assert alignment.length == 9
-    profiler = AlignmentProfiler(DATA / "dna.fasta")
+    profiler = MSATK(DATA / "dna.fasta")
     summary = profiler.summary()
     assert summary["tool"] == "MSATK"
     assert summary["number_of_sequences"] == 3
     assert summary["molecule_type"] == "codon"
     assert summary["variable_sites"] >= 1
+    assert summary["detected_file_format"] == "fasta"
+    assert summary["detected_molecule_type"] == "codon"
+    assert summary["sequence_lengths_consistent"] is True
+    assert summary["length_divisible_by_three"] is True
+    assert summary["stop_codons_exist"] is True
+    assert "frameshift_warnings_exist" in summary
+    assert "appears_codon_aware" in summary
 
 
 def test_per_sequence_and_site_stats():
-    profiler = AlignmentProfiler(DATA / "dna.fasta")
+    profiler = MSATK(DATA / "dna.fasta")
     seq_rows = _rows(profiler.per_sequence_stats())
     site_rows = _rows(profiler.per_site_stats())
     assert len(seq_rows) == 3
@@ -49,7 +56,7 @@ def test_protein_outputs():
 
 
 def test_write_outputs(tmp_path):
-    profiler = AlignmentProfiler(DATA / "dna.fasta")
+    profiler = MSATK(DATA / "dna.fasta")
     result = profiler.write_outputs(tmp_path, plots=False, force=True)
     assert result["summary"]["tool"] == "MSATK"
     assert (tmp_path / "tables" / "alignment_summary.csv").exists()
@@ -64,3 +71,11 @@ def _rows(value):
     if hasattr(value, "to_dict"):
         return value.to_dict(orient="records")
     return value
+
+
+def test_alignment_profiler_alias():
+    assert AlignmentProfiler is MSATK
+
+
+def test_lowercase_msatk_alias():
+    assert msatk is MSATK

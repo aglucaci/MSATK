@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from msatk.core.profiler import AlignmentProfiler
+from msatk.core.profiler import MSATK
 from msatk.io import write_csv
 from msatk.protein.analysis import (
     amino_acid_composition,
@@ -13,7 +13,7 @@ from msatk.protein.analysis import (
 )
 
 
-class ProteinProfiler(AlignmentProfiler):
+class ProteinProfiler(MSATK):
     """Protein alignment profiler."""
 
     def __init__(self, path: str | Path, sequence_type: str = "protein", fmt: str = "auto") -> None:

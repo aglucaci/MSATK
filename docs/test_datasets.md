@@ -26,10 +26,20 @@ These datasets are designed to test format parsing, molecule-type detection, sum
 
 ## Format Datasets
 
+- `tiny.aligned.fasta`
+- `tiny.a3m`
 - `tiny.phy`
+- `tiny_relaxed.phylip`
 - `tiny.clustal`
 - `tiny.nexus`
 - `tiny.stockholm`
+- `tiny.maf`
+- `tiny.sam`
+- `tiny.bam`
+- `tiny.cram`: generated when `pysam`/HTSlib is available
+- `reference.fasta`: reference used to generate CRAM
+
+The BAM and CRAM fixtures are generated from the synthetic reads in `tiny.sam` using `create_binary_alignment_fixtures.py`. They require `pysam` for regeneration and parsing.
 
 ## Edge Cases
 

@@ -9,6 +9,7 @@ dependencies:
   - numpy
   - scipy
   - matplotlib-base
+  - pysam
   - jinja2
   - typer
   - rich

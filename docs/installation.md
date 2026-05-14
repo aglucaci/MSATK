@@ -40,6 +40,18 @@ Recommended full install:
 pip install "msatk[all]"
 ```
 
+BAM/CRAM support requires `pysam`:
+
+```bash
+pip install "msatk[ngs]"
+```
+
+or:
+
+```bash
+mamba install -c conda-forge pysam
+```
+
 Developer install:
 
 ```bash

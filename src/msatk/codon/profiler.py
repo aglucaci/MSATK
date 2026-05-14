@@ -12,11 +12,11 @@ from msatk.codon.analysis import (
     rscu,
     stop_codon_report,
 )
-from msatk.core.profiler import AlignmentProfiler
+from msatk.core.profiler import MSATK
 from msatk.io import write_csv
 
 
-class CodonProfiler(AlignmentProfiler):
+class CodonProfiler(MSATK):
     """Codon-aware alignment profiler."""
 
     def __init__(self, path: str | Path, sequence_type: str = "codon", fmt: str = "auto") -> None:

@@ -8,6 +8,7 @@ from collections.abc import Iterable
 from statistics import mean, median
 
 from msatk.constants import DNA_BASES, GAP_CHARS, MISSING_CHARS
+from msatk.core.detect import alignment_detection_summary
 from msatk.models import Alignment
 
 
@@ -126,8 +127,10 @@ def alignment_summary(alignment: Alignment, molecule_type: str) -> dict[str, obj
         "number_of_sequences": alignment.n_sequences,
         "alignment_length": alignment.length,
         "rectangular_alignment": alignment.is_rectangular,
+        "sequence_lengths_consistent": alignment.is_rectangular,
         "detected_format": alignment.fmt,
         "molecule_type": molecule_type,
+        **alignment_detection_summary(alignment, molecule_type),
         "mean_sequence_length": mean(row["ungapped_length"] for row in seq_rows),
         "median_sequence_length": median(row["ungapped_length"] for row in seq_rows),
         "total_gaps": gaps,
