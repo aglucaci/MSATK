@@ -30,8 +30,7 @@ jobs:
       - name: Test local Conda install
         shell: bash -l {0}
         run: |
-          mamba create -n test-msatk --use-local msatk -y
-          conda activate test-msatk
-          msatk --help
-          msatk profile --help
-          msatk demo --out msatk_conda_demo --force
+          conda create -n test-msatk --use-local msatk -y
+          conda run -n test-msatk msatk --help
+          conda run -n test-msatk msatk profile --help
+          conda run -n test-msatk msatk demo --out msatk_conda_demo --force
