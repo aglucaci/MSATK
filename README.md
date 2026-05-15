@@ -1,7 +1,7 @@
 # MSATK
 
 <p align="center">
-  <img src="logo/msatk_logo.png" alt="MSATK logo" width="220">
+  <img src="logo/msatk_logo.png" alt="MSATK logo" width="420">
 </p>
 
 ![Tests](https://github.com/aglucaci/MSATK/actions/workflows/tests.yml/badge.svg)
