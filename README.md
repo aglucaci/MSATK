@@ -4,11 +4,11 @@
   <img src="logo/msatk_logo.png" alt="MSATK logo" width="220">
 </p>
 
-![Tests](https://github.com/yourname/msatk/actions/workflows/tests.yml/badge.svg)
-![Docs](https://github.com/yourname/msatk/actions/workflows/docs.yml/badge.svg)
+![Tests](https://github.com/aglucaci/MSATK/actions/workflows/tests.yml/badge.svg)
+![Docs](https://github.com/aglucaci/MSATK/actions/workflows/docs.yml/badge.svg)
 ![PyPI](https://img.shields.io/pypi/v/msatk)
 ![Python](https://img.shields.io/pypi/pyversions/msatk)
-![License](https://img.shields.io/github/license/yourname/msatk)
+![License](https://img.shields.io/github/license/aglucaci/MSATK)
 
 **MSATK** is a Python and command-line toolkit for profiling multiple sequence alignments. It converts nucleotide, protein, and codon-aware alignments into quality-control summaries, per-sequence and per-site statistics, publication-ready plots, codon usage metrics, RSCU tables, and standalone HTML reports.
 
@@ -79,7 +79,7 @@ pip install msatk
 ### Development install
 
 ```bash
-git clone https://github.com/yourname/msatk
+git clone https://github.com/aglucaci/MSATK
 cd msatk
 pip install -e ".[dev,all,docs]"
 ```

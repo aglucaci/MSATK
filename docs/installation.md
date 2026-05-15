@@ -55,7 +55,7 @@ mamba install -c bioconda pysam
 Developer install:
 
 ```bash
-git clone https://github.com/yourname/msatk
+git clone https://github.com/aglucaci/MSATK
 cd msatk
 pip install -e ".[dev,all]"
 ```
