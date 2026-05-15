@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from statistics import mean
+from typing import Any
 
 from msatk.constants import GAP_CHARS, STANDARD_GENETIC_CODE
 from msatk.models import Alignment
@@ -14,7 +15,7 @@ def iter_codons(sequence: str) -> list[tuple[int, str]]:
     return [(i // 3 + 1, clean[i : i + 3]) for i in range(0, len(clean) - 2, 3)]
 
 
-def codon_usage(alignment: Alignment) -> list[dict[str, object]]:
+def codon_usage(alignment: Alignment) -> list[dict[str, Any]]:
     counts: Counter[str] = Counter()
     for seq in alignment.padded_sequences():
         for _, codon in iter_codons(seq):
@@ -32,13 +33,13 @@ def codon_usage(alignment: Alignment) -> list[dict[str, object]]:
     ]
 
 
-def rscu(alignment: Alignment) -> list[dict[str, object]]:
+def rscu(alignment: Alignment) -> list[dict[str, Any]]:
     usage = {row["codon"]: int(row["count"]) for row in codon_usage(alignment)}
     by_aa: dict[str, list[str]] = defaultdict(list)
     for codon, aa in STANDARD_GENETIC_CODE.items():
         if aa != "*":
             by_aa[aa].append(codon)
-    rows: list[dict[str, object]] = []
+    rows: list[dict[str, Any]] = []
     for aa, codons in sorted(by_aa.items()):
         family_total = sum(usage.get(codon, 0) for codon in codons)
         expected = family_total / len(codons) if codons else 0
@@ -56,7 +57,7 @@ def rscu(alignment: Alignment) -> list[dict[str, object]]:
     return rows
 
 
-def amino_acid_from_codons(alignment: Alignment) -> list[dict[str, object]]:
+def amino_acid_from_codons(alignment: Alignment) -> list[dict[str, Any]]:
     counts: Counter[str] = Counter()
     for seq in alignment.padded_sequences():
         for _, codon in iter_codons(seq):
@@ -69,8 +70,8 @@ def amino_acid_from_codons(alignment: Alignment) -> list[dict[str, object]]:
     ]
 
 
-def stop_codon_report(alignment: Alignment) -> list[dict[str, object]]:
-    rows: list[dict[str, object]] = []
+def stop_codon_report(alignment: Alignment) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for record in alignment.records:
         codons = iter_codons(record.sequence)
         for index, codon in codons:
@@ -86,8 +87,8 @@ def stop_codon_report(alignment: Alignment) -> list[dict[str, object]]:
     return rows
 
 
-def codon_position_gc(alignment: Alignment) -> list[dict[str, object]]:
-    rows: list[dict[str, object]] = []
+def codon_position_gc(alignment: Alignment) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for position in (1, 2, 3):
         chars = [
             seq[i].upper().replace("U", "T")
@@ -105,8 +106,8 @@ def codon_position_gc(alignment: Alignment) -> list[dict[str, object]]:
     return rows
 
 
-def codon_position_entropy(per_site: list[dict[str, object]]) -> list[dict[str, object]]:
-    rows: list[dict[str, object]] = []
+def codon_position_entropy(per_site: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for position in (1, 2, 3):
         values = [
             float(row["entropy"]) for row in per_site if int(row["codon_position"]) == position

@@ -7,6 +7,7 @@ import shutil
 import sys
 from importlib import resources
 from pathlib import Path
+from typing import Any
 
 from msatk import __version__
 from msatk.codon import CodonProfiler
@@ -249,7 +250,7 @@ def cmd_demo(args: argparse.Namespace) -> int:
     return 0
 
 
-def _print_done(result: dict[str, object]) -> None:
+def _print_done(result: dict[str, Any]) -> None:
     summary = result["summary"]
     warnings = [warning for warning in result["warnings"] if str(warning).startswith("WARNING")]
     print("\nMSATK alignment profile complete\n")

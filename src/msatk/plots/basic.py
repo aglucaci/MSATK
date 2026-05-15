@@ -4,15 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 
 def generate_standard_plots(
     out_dir: str | Path,
-    per_sequence: list[dict[str, object]],
-    per_site: list[dict[str, object]],
-    composition: list[dict[str, object]],
+    per_sequence: list[dict[str, Any]],
+    per_site: list[dict[str, Any]],
+    composition: list[dict[str, Any]],
     identities: list[list[float]],
-    embeddings: list[dict[str, object]] | None = None,
+    embeddings: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     target = Path(out_dir)
     target.mkdir(parents=True, exist_ok=True)

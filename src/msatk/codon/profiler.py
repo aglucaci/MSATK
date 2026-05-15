@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from msatk.codon.analysis import (
     amino_acid_from_codons,
@@ -22,23 +23,23 @@ class CodonProfiler(MSATK):
     def __init__(self, path: str | Path, sequence_type: str = "codon", fmt: str = "auto") -> None:
         super().__init__(path, sequence_type=sequence_type, fmt=fmt)
 
-    def codon_usage(self) -> list[dict[str, object]]:
+    def codon_usage(self) -> list[dict[str, Any]]:
         return codon_usage(self.alignment)
 
-    def rscu(self) -> list[dict[str, object]]:
+    def rscu(self) -> list[dict[str, Any]]:
         return rscu(self.alignment)
 
-    def amino_acid_from_codons(self) -> list[dict[str, object]]:
+    def amino_acid_from_codons(self) -> list[dict[str, Any]]:
         return amino_acid_from_codons(self.alignment)
 
-    def stop_codon_report(self) -> list[dict[str, object]]:
+    def stop_codon_report(self) -> list[dict[str, Any]]:
         return stop_codon_report(self.alignment)
 
-    def codon_position_gc(self) -> list[dict[str, object]]:
+    def codon_position_gc(self) -> list[dict[str, Any]]:
         return codon_position_gc(self.alignment)
 
-    def codon_position_entropy(self) -> list[dict[str, object]]:
-        return codon_position_entropy(self.per_site_stats())
+    def codon_position_entropy(self) -> list[dict[str, Any]]:
+        return codon_position_entropy(self._rows(self.per_site_stats()))
 
     def write_codon_tables(self, out_dir: str | Path) -> None:
         out = Path(out_dir)

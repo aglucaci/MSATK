@@ -8,6 +8,7 @@ import sys
 from datetime import datetime, timezone
 from importlib import resources
 from pathlib import Path
+from typing import Any
 
 from msatk.core.detect import normalize_requested_type
 from msatk.core.interpretation import interpret_summary, recommended_next_steps
@@ -43,7 +44,7 @@ class MSATK:
         self.alignment = read_alignment(self.path, fmt=fmt, validation_mode=validation_mode)
         self.sequence_type = normalize_requested_type(sequence_type, self.alignment)
 
-    def summary(self) -> dict[str, object]:
+    def summary(self) -> dict[str, Any]:
         return alignment_summary(self.alignment, self.sequence_type)
 
     def per_sequence_stats(self) -> object:
@@ -157,7 +158,7 @@ class MSATK:
         max_gap_site: float = 0.5,
         force: bool = False,
         command: str | None = None,
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:
         out = self._resolve_outdir(outdir, force=force)
         tables_dir = out / "tables"
         figures_dir = out / "figures"
@@ -265,7 +266,7 @@ class MSATK:
             "report": str(report_path) if report and report_path.exists() else "",
         }
 
-    def _write_mode_tables(self, tables_dir: Path, site_rows: list[dict[str, object]]) -> None:
+    def _write_mode_tables(self, tables_dir: Path, site_rows: list[dict[str, Any]]) -> None:
         if self.sequence_type == "codon":
             from msatk.codon.analysis import (
                 amino_acid_from_codons,
@@ -308,11 +309,11 @@ class MSATK:
 
     def _qc_flag_rows(
         self,
-        seq_rows: list[dict[str, object]],
-        site_rows: list[dict[str, object]],
+        seq_rows: list[dict[str, Any]],
+        site_rows: list[dict[str, Any]],
         max_gap_seq: float,
         max_gap_site: float,
-    ) -> list[dict[str, object]]:
+    ) -> list[dict[str, Any]]:
         return [
             {**row, "flag_type": "sequence"} for row in flagged_sequences(seq_rows, max_gap_seq)
         ] + [{**row, "flag_type": "site"} for row in flagged_sites(site_rows, max_gap_site)]
@@ -328,7 +329,7 @@ class MSATK:
             candidate = out.with_name(f"{out.name}_{index}")
         return candidate
 
-    def _frame(self, rows: list[dict[str, object]]) -> object:
+    def _frame(self, rows: list[dict[str, Any]]) -> object:
         try:
             import pandas as pd
 
@@ -336,7 +337,7 @@ class MSATK:
         except Exception:
             return rows
 
-    def _rows(self, value: object) -> list[dict[str, object]]:
+    def _rows(self, value: object) -> list[dict[str, Any]]:
         if hasattr(value, "to_dict"):
             return value.to_dict(orient="records")  # type: ignore[no-any-return,call-arg]
         return value  # type: ignore[return-value]

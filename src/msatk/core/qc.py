@@ -2,26 +2,28 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from msatk.models import Alignment
 
 
 def flagged_sequences(
-    per_sequence: list[dict[str, object]], max_gap_seq: float = 0.3
-) -> list[dict[str, object]]:
+    per_sequence: list[dict[str, Any]], max_gap_seq: float = 0.3
+) -> list[dict[str, Any]]:
     return [row for row in per_sequence if float(row.get("gap_fraction", 0.0)) > max_gap_seq]
 
 
 def flagged_sites(
-    per_site: list[dict[str, object]], max_gap_site: float = 0.5
-) -> list[dict[str, object]]:
+    per_site: list[dict[str, Any]], max_gap_site: float = 0.5
+) -> list[dict[str, Any]]:
     return [row for row in per_site if float(row.get("gap_fraction", 0.0)) > max_gap_site]
 
 
 def qc_warnings(
     alignment: Alignment,
     molecule_type: str,
-    per_sequence: list[dict[str, object]],
-    per_site: list[dict[str, object]],
+    per_sequence: list[dict[str, Any]],
+    per_site: list[dict[str, Any]],
     max_gap_seq: float = 0.3,
     max_gap_site: float = 0.5,
 ) -> list[str]:

@@ -6,6 +6,7 @@ import math
 from collections import Counter
 from collections.abc import Iterable
 from statistics import mean, median
+from typing import Any
 
 from msatk.constants import DNA_BASES, GAP_CHARS, MISSING_CHARS
 from msatk.core.detect import alignment_detection_summary
@@ -48,11 +49,11 @@ def distance_matrix(alignment: Alignment) -> list[list[float]]:
     return [[1.0 - value for value in row] for row in identity_matrix(alignment)]
 
 
-def per_sequence_stats(alignment: Alignment) -> list[dict[str, object]]:
+def per_sequence_stats(alignment: Alignment) -> list[dict[str, Any]]:
     seqs = alignment.padded_sequences()
     ids = alignment.ids
     matrix = identity_matrix(alignment)
-    rows: list[dict[str, object]] = []
+    rows: list[dict[str, Any]] = []
     for idx, (seq_id, seq) in enumerate(zip(ids, seqs)):
         raw_length = len(seq.rstrip("-"))
         gap_count = sum(ch in GAP_CHARS for ch in seq)
@@ -80,8 +81,8 @@ def per_sequence_stats(alignment: Alignment) -> list[dict[str, object]]:
     return rows
 
 
-def per_site_stats(alignment: Alignment) -> list[dict[str, object]]:
-    rows: list[dict[str, object]] = []
+def per_site_stats(alignment: Alignment) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for index, column in enumerate(alignment.columns(), start=1):
         counts = Counter(ch.upper() for ch in column if ch.upper() not in MISSING_CHARS)
         total = len(column)
@@ -110,7 +111,7 @@ def per_site_stats(alignment: Alignment) -> list[dict[str, object]]:
     return rows
 
 
-def alignment_summary(alignment: Alignment, molecule_type: str) -> dict[str, object]:
+def alignment_summary(alignment: Alignment, molecule_type: str) -> dict[str, Any]:
     seq_rows = per_sequence_stats(alignment)
     site_rows = per_site_stats(alignment)
     identities = [
@@ -147,7 +148,7 @@ def alignment_summary(alignment: Alignment, molecule_type: str) -> dict[str, obj
     }
 
 
-def composition_summary(alignment: Alignment) -> list[dict[str, object]]:
+def composition_summary(alignment: Alignment) -> list[dict[str, Any]]:
     counts: Counter[str] = Counter()
     for seq in alignment.sequences:
         counts.update(ch.upper() for ch in seq if ch.upper() not in MISSING_CHARS)

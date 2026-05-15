@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any
 
-def interpret_summary(summary: dict[str, object], warnings: list[str]) -> str:
+
+def interpret_summary(summary: dict[str, Any], warnings: list[str]) -> str:
     """Create a concise human-readable interpretation."""
 
     nseq = int(summary.get("number_of_sequences", 0))
@@ -42,7 +44,7 @@ def interpret_summary(summary: dict[str, object], warnings: list[str]) -> str:
     )
 
 
-def recommended_next_steps(summary: dict[str, object], warnings: list[str]) -> list[str]:
+def recommended_next_steps(summary: dict[str, Any], warnings: list[str]) -> list[str]:
     """Suggest practical next steps from profile results."""
 
     steps: list[str] = []
