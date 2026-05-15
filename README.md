@@ -1,4 +1,4 @@
-# MSATK
+# MSATK: Multiple Sequence Alignment Tool-Kit
 
 <p align="center">
   <img src="logo/msatk_logo.png" alt="MSATK logo" width="420">
