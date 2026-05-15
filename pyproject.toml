@@ -45,7 +45,7 @@ packages = ["src/msatk"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["--strict-markers", "--strict-config", "-ra", "--basetemp=.tmp/pytest"]
+addopts = ["--strict-markers", "--strict-config", "-ra", "--basetemp=.pytest_tmp"]
 markers = [
   "slow: marks tests as slow",
   "integration: full workflow tests",
