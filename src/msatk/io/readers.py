@@ -254,7 +254,7 @@ def _read_bam_cram(path: Path, fmt: str) -> list[SequenceRecord]:
     except Exception as exc:
         raise AlignmentFormatError(
             "BAM/CRAM input requires the optional 'pysam' dependency. "
-            "Install it with conda (`mamba install -c conda-forge pysam`) or pip (`pip install pysam`)."
+            "Install it with conda (`mamba install -c bioconda pysam`) or pip (`pip install pysam`)."
         ) from exc
 
     mode = "rc" if fmt == "cram" else "rb"

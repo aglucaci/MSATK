@@ -49,7 +49,7 @@ pip install "msatk[ngs]"
 or:
 
 ```bash
-mamba install -c conda-forge pysam
+mamba install -c bioconda pysam
 ```
 
 Developer install:

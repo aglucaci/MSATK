@@ -200,7 +200,7 @@ pip install "msatk[embed]"
 pip install "msatk[ngs]"
 ```
 
-`SAM` is supported without extra dependencies. `BAM` and `CRAM` require `pysam`; install with `pip install "msatk[ngs]"` or `mamba install -c conda-forge pysam`.
+`SAM` is supported without extra dependencies. `BAM` and `CRAM` require `pysam`; install with `pip install "msatk[ngs]"` or `mamba install -c bioconda pysam`.
 
 Developer install:
 

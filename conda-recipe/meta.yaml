@@ -17,17 +17,16 @@ build:
 
 requirements:
   host:
-    - python >=3.10
+    - python >=3.10,<3.13
     - pip
     - hatchling
   run:
-    - python >=3.10
+    - python >=3.10,<3.13
     - biopython
     - pandas
     - numpy
     - scipy
     - matplotlib-base
-    - pysam
     - jinja2
     - typer
     - rich
