@@ -20,8 +20,10 @@ from msatk.io import write_csv
 class CodonProfiler(MSATK):
     """Codon-aware alignment profiler."""
 
-    def __init__(self, path: str | Path, sequence_type: str = "codon", fmt: str = "auto") -> None:
-        super().__init__(path, sequence_type=sequence_type, fmt=fmt)
+    def __init__(
+        self, path: str | Path, sequence_type: str = "codon", fmt: str = "auto", **kwargs: Any
+    ) -> None:
+        super().__init__(path, sequence_type=sequence_type, fmt=fmt, **kwargs)
 
     def codon_usage(self) -> list[dict[str, Any]]:
         return codon_usage(self.alignment)

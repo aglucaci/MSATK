@@ -2,11 +2,20 @@
 
 ![MSATK logo](assets/msatk_logo.png)
 
-MSATK is a Python and command-line toolkit for profiling multiple sequence alignments. It turns nucleotide, protein, and codon-aware alignments into QC summaries, per-sequence and per-site statistics, plots, codon/protein summaries, and shareable reports.
+MSATK is a unified framework for **statistical profiling, visualization and
+machine-learning representations of multiple sequence alignments**.
 
 ```bash
-pip install msatk
+pip install "msatk[plots]"
 msatk profile alignment.fasta
 ```
 
-The default output is a FastQC-like directory with `report.html`, `summary.json`, `qc_warnings.txt`, `tables/`, and `figures/`.
+One command produces:
+
+* explicitly defined statistics at alignment, sequence, site and pair resolution
+  ([conventions](statistics.md), [metric dictionary](metrics.md));
+* severity-ranked [QC findings](qc_warnings.md);
+* publication-quality figures, alignment views and logos ([visualization](visualization.md));
+* an interactive, fully offline `report.html`;
+* optional reproducible tensors and images for ML ([ML encodings](ml_encodings.md));
+* complete provenance (input hash, versions, parameters).

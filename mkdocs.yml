@@ -11,7 +11,12 @@ nav:
   - CLI: CLI.md
   - Python API: python_api.md
   - Outputs: outputs.md
-  - QC Warnings: qc_warnings.md
+  - Statistical Conventions: statistics.md
+  - Metric Dictionary: metrics.md
+  - Visualization: visualization.md
+  - ML Encodings: ml_encodings.md
+  - QC Findings: qc_warnings.md
+  - Benchmarks: benchmarks.md
   - Workflow Integration: workflow_integration.md
   - Conda Packaging: conda_packaging.md
   - Test Datasets: test_datasets.md

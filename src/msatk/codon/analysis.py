@@ -51,7 +51,7 @@ def rscu(alignment: Alignment) -> list[dict[str, Any]]:
                     "codon": codon,
                     "count": count,
                     "synonymous_family_size": len(codons),
-                    "rscu": count / expected if expected else 0.0,
+                    "rscu": count / expected if expected else None,
                 }
             )
     return rows
@@ -110,7 +110,15 @@ def codon_position_entropy(per_site: list[dict[str, Any]]) -> list[dict[str, Any
     rows: list[dict[str, Any]] = []
     for position in (1, 2, 3):
         values = [
-            float(row["entropy"]) for row in per_site if int(row["codon_position"]) == position
+            float(row["entropy"])
+            for row in per_site
+            if row.get("codon_position") == position and row.get("entropy") is not None
         ]
-        rows.append({"codon_position": position, "mean_entropy": mean(values) if values else 0.0})
+        rows.append(
+            {
+                "codon_position": position,
+                "mean_entropy": mean(values) if values else None,
+                "observed_sites": len(values),
+            }
+        )
     return rows

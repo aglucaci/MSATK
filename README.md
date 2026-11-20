@@ -10,9 +10,37 @@
 ![Python](https://img.shields.io/pypi/pyversions/msatk)
 ![License](https://img.shields.io/github/license/aglucaci/MSATK)
 
-**MSATK** is a Python and command-line toolkit for profiling multiple sequence alignments. It converts nucleotide, protein, and codon-aware alignments into quality-control summaries, per-sequence and per-site statistics, publication-ready plots, codon usage metrics, RSCU tables, and standalone HTML reports.
+**MSATK** is a unified framework for **statistical profiling, visualization and
+machine-learning representations of multiple sequence alignments**. One command
+takes an existing alignment to explicitly defined statistics at alignment, sequence,
+site and pair resolution; severity-ranked QC findings; publication-quality figures;
+an interactive offline HTML report; and reproducible tensor/image exports for
+downstream models.
 
-> **MSATK: one command to profile, visualize, and report multiple sequence alignments.**
+> **One command, one complete alignment characterization, multiple interoperable outputs, no hidden scientific assumptions.**
+
+### What makes it different
+
+- **Explicit semantics.** Gaps, missing data (`N`/`X`/`?`) and ambiguity codes are
+  handled by one molecule-aware policy shared by every metric. Undefined values
+  (all-gap columns, non-overlapping pairs) are reported as `null`, never as 0.
+  Every output field is defined in a [metric dictionary](docs/metrics.md).
+- **Multi-resolution statistics.** 145 defined fields (alignment, sequence, site and pair level, including provenance): completeness, gap
+  structure, conservation, entropy/information content, composition and skews,
+  consensus- and composition-based outlier scores, pairwise identity, and
+  population-genetic statistics (π, Watterson's θ, Tajima's D, haplotype
+  diversity, Ts/Tv) validated against scikit-allel.
+- **Scales by design.** Vectorised NumPy core; exact pairwise identity via blocked
+  matrix products, with a size-aware policy (exact → seeded sampling → off).
+- **Interactive offline report.** Scrollable/zoomable residue viewer, clickable
+  site tracks, sortable/searchable tables with CSV export, pairwise heatmap,
+  provenance — no server, account or network access; optional single-file mode.
+- **Publication figures.** Residue-level alignment figures with consensus and
+  annotation tracks, sequence logos, custom colour themes; PNG/SVG/PDF/TIFF.
+- **ML-ready representations.** Lossless categorical encodings, one-hot with
+  explicit ambiguity policies, physicochemical and QC feature channels,
+  coordinate-preserving windows with padding masks, RGB/label images — each with
+  a `manifest.json`, plus NumPy/PyTorch/TensorFlow dataset adapters.
 
 ## Quick Start
 
@@ -25,13 +53,13 @@ MSATK automatically detects the input format and molecule type, computes summary
 
 ```text
 alignment_msatk/
-|-- report.html
-|-- summary.json
-|-- parameters.yaml
-|-- msatk.log
-|-- qc_warnings.txt
-|-- tables/
-`-- figures/
+|-- report.html            interactive offline dashboard
+|-- summary.json           statistics + provenance (input SHA-256, versions, parameters)
+|-- metric_dictionary.json definitions of every field
+|-- qc_findings.json       severity-ranked QC findings
+|-- parameters.yaml / run_manifest.json / msatk.log
+|-- tables/                per-site, per-sequence, pairwise, gap-block, composition tables
+`-- figures/               statistical plots, alignment overview, sequence logo
 ```
 
 Try the bundled demo:
@@ -141,8 +169,8 @@ $env:PYTHONPATH="src"; python -m msatk.cli demo --out msatk_demo --force
 - One-command alignment profiling
 - DNA, RNA, protein, and codon-aware modes
 - Common alignment inputs: FASTA/aligned FASTA, A3M, PHYLIP/relaxed PHYLIP, CLUSTAL, Stockholm, NEXUS, MAF, SAM, BAM, and CRAM
-- Publication-ready PNG plots with optional plotting dependencies
-- CSV, JSON, HTML, and Markdown outputs
+- Publication-ready PNG/SVG/PDF/TIFF figures, residue-level alignment views and logos
+- CSV, JSON, HTML, Markdown, NPZ and image outputs
 - Codon usage, RSCU, GC1/GC2/GC3, and stop codon summaries
 - Protein amino-acid, residue-class, and hydrophobicity summaries
 - QC warnings with plain-language interpretation
@@ -196,7 +224,7 @@ Useful extras:
 ```bash
 pip install "msatk[dataframes]"
 pip install "msatk[plots]"
-pip install "msatk[embed]"
+pip install "msatk[embed]"      # UMAP / t-SNE (PCA needs only NumPy)
 pip install "msatk[ngs]"
 ```
 
@@ -246,14 +274,25 @@ Update the PyPI source SHA256, copy it to `recipes/msatk/meta.yaml` in a fork of
 ## CLI
 
 ```bash
-msatk profile alignment.fasta
+msatk profile alignment.fasta --out results/                 # full profile + report
+msatk profile alignment.fasta --preset comprehensive --plots png,svg,pdf --self-contained
+msatk stats alignment.fasta --level site > sites.csv          # summary|site|sequence|pairwise|composition|gaps
 msatk qc alignment.fasta
+msatk plot alignment.fasta --start 1 --end 300 --out region.svg
+msatk logo alignment.fasta --start 1 --end 60 --out logo.pdf
+msatk encode alignment.fasta --encoding onehot --window 256 --stride 128 --out ml/
+msatk image alignment.fasta --kind rgb --scale 4 --out alignment.png
+msatk embed alignment.fasta --method pca
 msatk codon cds_alignment.fasta
 msatk protein protein_alignment.faa
-msatk embed alignment.fasta --method pca
 msatk report alignment_msatk/
+msatk metrics
 msatk demo
 ```
+
+Expensive steps are opt-in or size-aware: `--pairwise auto|exact|sampled|none`
+(default `auto`: exact up to 1,000 sequences, deterministic sampling above) and
+`--embeddings none|pca|umap|tsne` (default off). See [docs/CLI.md](docs/CLI.md).
 
 Example terminal output:
 
@@ -266,7 +305,7 @@ Sequences: 248
 Alignment length: 3,642
 Gap fraction: 4.8%
 Variable sites: 712
-Mean pairwise identity: 91.4%
+Mean pairwise identity: 91.4% (exact)
 
 Results written to:
 alignment_msatk/
@@ -277,41 +316,40 @@ alignment_msatk/report.html
 ## Python API
 
 ```python
-from msatk import MSATK, CodonProfiler, ProteinProfiler, profile_alignment
+from msatk import AlignmentProfiler
 
-profiler = MSATK("alignment.fasta")
-summary = profiler.summary()
-per_sequence = profiler.per_sequence_stats()
-per_site = profiler.per_site_stats()
+msa = AlignmentProfiler("alignment.fasta")
 
-profiler.plot_gap_profile()
-profiler.plot_entropy()
-profiler.write_report("report.html")
+summary = msa.summary()          # alignment-level statistics
+sites = msa.sites()              # one record per column
+sequences = msa.sequences()      # one record per sequence
+pairs = msa.pairwise()           # one record per pair
+qc = msa.qc()                    # severity-ranked findings
 
-results = profile_alignment("alignment.fasta", outdir="alignment_msatk")
+msa.plot_alignment("alignment.svg", start=1, end=300, theme="nucleotide")
+msa.plot_logo("logo.pdf", start=1, end=60)
 
-codon = CodonProfiler("cds_alignment.fasta")
-rscu = codon.rscu()
+tensor = msa.to_tensor("onehot")             # .array is a NumPy (N, L, C) array
+msa.to_image("alignment.png", kind="label")  # lossless label image + manifest
+msa.export_encoding("ml/", encoding="onehot", window=256)
 
-protein = ProteinProfiler("protein_alignment.faa")
-aa = protein.amino_acid_composition()
+msa.report("report.html")                    # interactive single-file report
 ```
 
-Lowercase alias is also supported:
+Codon- and protein-specific profilers (`CodonProfiler`, `ProteinProfiler`) add
+codon usage, RSCU, GC1/GC2/GC3, stop-codon reports, amino-acid composition,
+residue classes and hydropathy. When pandas is installed, tables are returned as
+DataFrames; otherwise as lists of dictionaries. See [docs/python_api.md](docs/python_api.md).
 
-```python
-from msatk import msatk
+## Documentation
 
-profiler = msatk("alignment.fasta")
-```
-
-When pandas is installed, table-like API methods return pandas DataFrames. In minimal environments, MSATK falls back to lists of dictionaries.
+- [Statistical conventions](docs/statistics.md) and [metric dictionary](docs/metrics.md)
+- [Visualization](docs/visualization.md) and [ML encodings](docs/ml_encodings.md)
+- [QC findings](docs/qc_warnings.md), [outputs](docs/outputs.md), [benchmarks](docs/benchmarks.md)
 
 ## Roadmap
 
-- `0.1`: one-command profiling, summary statistics, QC, tables, report
-- `0.2`: hardened format support, better terminal output, example datasets
-- `0.3`: codon-aware release with RSCU, GC1/GC2/GC3, stop codon detection
-- `0.4`: visualization themes, SVG output, richer report customization
-- `0.5`: embeddings, clustering, outlier detection
-- `1.0`: stable API/output schema, PyPI/Bioconda, containers, workflow examples
+See [docs/ROADMAP.md](docs/ROADMAP.md). Version 0.2 implements the publication-critical
+core (statistical semantics, optional/size-aware pairwise, offline interactive
+report, alignment figures, ML encodings, metric dictionary, provenance); 1.0 targets
+a stable API/schema, external benchmark comparisons and an Application Note.

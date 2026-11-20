@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from msatk.report.formatting import format_value
+
 
 def render_markdown_report(
     summary: dict[str, object],
@@ -27,7 +29,7 @@ def render_markdown_report(
         "| --- | --- |",
     ]
     lines.extend(
-        f"| {key.replace('_', ' ').title()} | {_format_value(value)} |"
+        f"| {key.replace('_', ' ').title()} | {format_value(value, key)} |"
         for key, value in summary.items()
         if key not in {"interpretation", "recommended_next_steps"}
     )
@@ -42,11 +44,3 @@ def render_markdown_report(
         lines.append("No figures were generated in this run.")
     lines.append("")
     return "\n".join(lines)
-
-
-def _format_value(value: object) -> str:
-    if isinstance(value, float):
-        if 0 <= value <= 1:
-            return f"{value:.1%}"
-        return f"{value:.6g}"
-    return str(value)

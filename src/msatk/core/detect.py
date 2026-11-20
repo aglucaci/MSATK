@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import numpy as np
+
 from msatk.constants import DNA_ALPHABET, GAP_CHARS, PROTEIN_ALPHABET, RNA_ALPHABET, STOP_CODONS
 from msatk.models import Alignment
 
@@ -70,23 +72,38 @@ def alignment_detection_summary(alignment: Alignment, molecule_type: str) -> dic
     }
 
 
+def _codon_matrix(alignment: Alignment) -> tuple[np.ndarray, np.ndarray]:
+    """Return (uint8 char matrix truncated to whole codons, original lengths)."""
+
+    seqs = alignment.padded_sequences()
+    raw = "".join(seqs).upper().replace("U", "T").encode("ascii", errors="replace")
+    chars = np.frombuffer(raw, dtype=np.uint8).reshape(len(seqs), alignment.length)
+    lengths = np.array([len(r.sequence) for r in alignment.records])
+    return chars[:, : (alignment.length // 3) * 3], lengths
+
+
 def _stop_codon_hits(alignment: Alignment) -> list[dict[str, object]]:
     hits: list[dict[str, object]] = []
     if alignment.length < 3:
         return hits
-    for record in alignment.records:
-        seq = record.sequence.upper().replace("U", "T")
-        codons = [seq[i : i + 3] for i in range(0, len(seq) - 2, 3)]
-        for index, codon in enumerate(codons, start=1):
-            if codon in STOP_CODONS:
-                hits.append(
-                    {
-                        "sequence_id": record.id,
-                        "codon_index": index,
-                        "codon": codon,
-                        "internal_stop": index != len(codons),
-                    }
-                )
+    chars, lengths = _codon_matrix(alignment)
+    codons = chars.reshape(chars.shape[0], -1, 3)
+    is_stop = np.zeros(codons.shape[:2], dtype=bool)
+    for stop in STOP_CODONS:
+        code = np.frombuffer(stop.encode(), dtype=np.uint8)
+        is_stop |= (codons == code).all(axis=2)
+    for row, col in zip(*np.nonzero(is_stop)):
+        n_codons = int(lengths[row]) // 3
+        if col >= n_codons:
+            continue
+        hits.append(
+            {
+                "sequence_id": alignment.records[row].id,
+                "codon_index": int(col) + 1,
+                "codon": bytes(codons[row, col]).decode(),
+                "internal_stop": int(col) + 1 != n_codons,
+            }
+        )
     return hits
 
 
@@ -94,27 +111,34 @@ def _frame_warnings(alignment: Alignment) -> list[dict[str, object]]:
     warnings: list[dict[str, object]] = []
     if alignment.length % 3 != 0:
         warnings.append({"scope": "alignment", "reason": "alignment_length_not_divisible_by_three"})
-    for record in alignment.records:
-        ungapped = "".join(ch for ch in record.sequence if ch not in GAP_CHARS)
-        if len(ungapped) % 3 != 0:
+    chars, lengths = _codon_matrix(alignment)
+    gap_codes = np.frombuffer("".join(sorted(GAP_CHARS)).encode(), dtype=np.uint8)
+    seqs = alignment.padded_sequences()
+    full_gap = np.isin(
+        np.frombuffer("".join(seqs).encode("ascii", errors="replace"), dtype=np.uint8),
+        gap_codes,
+    ).reshape(len(seqs), alignment.length)
+    ungapped = [int(n) - int(full_gap[i, : int(n)].sum()) for i, n in enumerate(lengths)]
+    gaps = full_gap[:, : chars.shape[1]].reshape(chars.shape[0], -1, 3).sum(axis=2)
+    partial = (gaps > 0) & (gaps < 3)
+    for i, record in enumerate(alignment.records):
+        if ungapped[i] % 3 != 0:
             warnings.append(
                 {
                     "scope": "sequence",
                     "sequence_id": record.id,
                     "reason": "ungapped_length_not_divisible_by_three",
-                    "ungapped_length": len(ungapped),
+                    "ungapped_length": ungapped[i],
                 }
             )
-        seq = record.sequence.upper()
-        for index in range(0, max(len(seq) - 2, 0), 3):
-            codon = seq[index : index + 3]
-            if any(ch in GAP_CHARS for ch in codon) and not all(ch in GAP_CHARS for ch in codon):
-                warnings.append(
-                    {
-                        "scope": "sequence",
-                        "sequence_id": record.id,
-                        "reason": "partial_gap_inside_codon",
-                        "codon_index": index // 3 + 1,
-                    }
-                )
+        n_codons = int(lengths[i]) // 3
+        for col in np.nonzero(partial[i, :n_codons])[0]:
+            warnings.append(
+                {
+                    "scope": "sequence",
+                    "sequence_id": record.id,
+                    "reason": "partial_gap_inside_codon",
+                    "codon_index": int(col) + 1,
+                }
+            )
     return warnings

@@ -1,180 +1,200 @@
 ---
-title: "MSATK: a Python toolkit for statistical, visual, and codon-aware profiling of multiple sequence alignments"
+title: "MSATK: comprehensive statistical profiling, visualization and machine-learning representations of multiple sequence alignments"
 tags:
   - Python
   - bioinformatics
   - multiple sequence alignment
-  - phylogenetics
-  - codon usage
   - quality control
+  - phylogenetics
+  - machine learning
 authors:
   - name: Alexander Lucaci
     affiliation: 1
 affiliations:
   - name: MSATK Project
     index: 1
-date: 14 May 2026
+date: 20 November 2026
 bibliography: references.bib
 ---
 
+<!--
+DRAFT — Bioinformatics Application Note (target ≤ 2,000 words + 1 figure).
+Sections marked [TODO] require experiments that have not yet been run; do not
+submit until they are filled with measured results. Word budget per section is
+given in comments.
+-->
+
 # Abstract
 
-Multiple sequence alignments are central to phylogenetics, molecular evolution, comparative genomics, protein-family analysis, and genomic surveillance. However, researchers often lack a standardized, reproducible way to summarize alignment quality, gap structure, conservation, codon usage, and sequence-level outliers before downstream analysis. We present MSATK, a Python and command-line toolkit for statistical, visual, and codon-aware profiling of multiple sequence alignments. MSATK supports common alignment formats, automatically infers molecule type, computes alignment-wide, per-sequence, and per-site metrics, generates quality-control warnings, and writes machine-readable tables with standalone HTML and Markdown reports. For coding alignments, MSATK reports codon usage, relative synonymous codon usage, codon-position summaries, stop-codon warnings, frame-related warnings, and translated amino-acid composition. Protein alignments are summarized using amino-acid composition, residue-class summaries, hydrophobicity, conservation, entropy, and pairwise identity. MSATK is designed for command-line use, Python notebooks, teaching, manuscript supplementary outputs, and automated workflows requiring stable filenames and reproducible metadata. The software is freely available under the MIT License and can be installed from source, PyPI, or Conda-compatible environments.
+<!-- ~150 words -->
 
-# Introduction
+**Summary:** Multiple sequence alignments (MSAs) underpin phylogenetics, molecular
+evolution and protein-family analysis, yet the checks applied to them before
+downstream inference are usually ad hoc scripts whose treatment of gaps, missing
+data and ambiguity is undocumented. MSATK is a Python toolkit and command-line
+application that turns an existing alignment into explicitly defined statistics at
+alignment, sequence, site and pair resolution, severity-ranked quality-control
+findings, publication-quality figures, an interactive offline HTML report, and
+reproducible numerical and image representations for machine learning. All metrics
+share one molecule-aware character policy, undefined quantities are reported as
+missing rather than zero, and every output field is defined in a versioned metric
+dictionary. A vectorised core profiles a 5,000 × 10,000 alignment in about five
+seconds.
 
-Multiple sequence alignments (MSAs) are a fundamental data structure in bioinformatics. They support phylogenetic inference, molecular evolution, comparative genomics, protein-family analysis, metagenomics, and viral genomic surveillance. Before these downstream analyses, researchers commonly need to evaluate alignment completeness, gap structure, sequence quality, conservation, compositional bias, pairwise similarity, and, for coding sequences, codon-level properties. These summaries are frequently produced using project-specific scripts or by combining several specialized tools, which can make quality-control decisions difficult to reproduce across projects.
+**Availability and implementation:** MSATK is implemented in Python (≥ 3.10) and
+released under the MIT licence at https://github.com/aglucaci/MSATK, with
+documentation, tests and benchmarks. Version 0.2.0 is described.
 
-Existing software provides excellent support for related but distinct stages of alignment analysis. MAFFT [@katoh2013mafft], MUSCLE [@edgar2004muscle], and Clustal Omega [@sievers2011clustal] construct alignments; Jalview [@waterhouse2009jalview] and AliView [@larsson2014aliview] support interactive alignment inspection; trimAl [@capella2009trimal] assists with alignment trimming; and IQ-TREE [@minh2020iqtree], RAxML [@stamatakis2014raxml], HyPhy [@pond2020hyphy], and PAML [@yang2007paml] support downstream inference. These tools are not intended to provide a single standardized, report-oriented summary of alignment quality, composition, codon usage, warnings, plots, and reproducible output metadata.
+# 1 Introduction
 
-MSATK fills this gap by providing a "FastQC-like" profiling layer for multiple sequence alignments. Given an input alignment, MSATK produces a structured output directory containing summary metadata, quality-control warnings, tabular statistics, optional plots, and shareable reports. The goal is not to replace alignment algorithms, manual visualization tools, trimming tools, phylogenetic software, or selection-analysis packages. Instead, MSATK helps users rapidly assess whether an alignment is complete, coherent, codon-aware when expected, and suitable for subsequent analysis.
+<!-- ~300 words -->
 
-# Software Overview
+Before an MSA is used for tree inference, selection analysis or model training,
+analysts need to know how complete it is, where gaps and ambiguity concentrate,
+how conserved and informative its columns are, and which sequences are outliers.
+Existing tools address parts of this problem: AMAS computes summary statistics and
+manipulates alignments [@borowiec2016amas], AliStat reports completeness
+[@wong2020alistat], trimAl filters columns [@capella2009trimal], CIAlign cleans and
+visualises alignments [@tumescheit2022cialign], and Jalview and AliView support
+interactive inspection [@waterhouse2009jalview; @larsson2014aliview].
 
-MSATK is both a Python package and a command-line application. The primary command profiles an input alignment and writes a complete output directory:
+Three gaps remain. First, conventions are implicit: whether an all-gap column
+counts as conserved, whether non-overlapping sequences have identity zero or no
+identity, and whether `N` is missing data (DNA) or asparagine (protein) differ
+between scripts and change results. Second, statistics, figures and reports are
+produced by separate tools with separate parsers. Third, ML studies that encode
+alignments as tensors re-implement encodings without recording vocabulary, channel
+semantics or coordinate provenance.
 
-```bash
-msatk profile alignment.fasta --out msatk_results/
-```
+MSATK addresses these with a single analysis engine whose conventions are explicit,
+tested and exported alongside every result.
 
-A bundled demonstration command provides a quick smoke test and example report:
+# 2 Implementation
 
-```bash
-msatk demo
-```
+<!-- ~450 words -->
 
-MSATK can also be used programmatically:
+MSATK reads FASTA/A3M, PHYLIP, CLUSTAL, Stockholm, NEXUS, MAF and SAM (BAM/CRAM via
+pysam [@pysam]) and detects molecule type. The alignment is vectorised once into
+three N × L arrays — normalised characters, cell state and canonical-residue index —
+under a molecule-specific policy that assigns each cell to *residue*, *ambiguous*,
+*missing*, *gap* or *stop*. Unequal-length input is padded with missing data, never
+with gaps, and the padding is reported.
 
-```python
-from msatk import MSATK
+All statistics are NumPy [@harris2020numpy] array operations on this shared
+encoding. Column-level counts drive entropy [@shannon1948], information content,
+conservation, parsimony-informative and singleton classification; columns without
+residues are classified as *unobserved* and receive null statistics. Sequence-level
+statistics include gap-run structure, spans, ambiguity, composition, identity to
+the majority consensus and composition distance, with robust (median/MAD) z-scores
+for outlier detection that avoid the O(N²) cost of pairwise comparison.
 
-profiler = MSATK("alignment.fasta")
-summary = profiler.summary()
-per_sequence = profiler.per_sequence_stats()
-per_site = profiler.per_site_stats()
-profiler.write_outputs("msatk_results", force=True)
-```
+Pairwise identity is computed over mutually comparable sites as Σ_c X_c X_cᵀ over
+one-hot indicator matrices in row blocks. A size-aware policy chooses exact
+comparison up to 1,000 sequences and a seeded sample of pairs above that; the method
+and seed are recorded. For nucleotide alignments, MSATK computes segregating sites,
+nucleotide diversity [@nei1979], Watterson's θ [@watterson1975], Tajima's D
+[@tajima1989], haplotype diversity and pooled Ts/Tv on complete sites.
 
-Specialized Python interfaces are available for codon and protein workflows through `CodonProfiler` and `ProteinProfiler`. `AlignmentProfiler` remains available as an alias for `MSATK`.
+Each statistic is registered with its resolution, formula, denominator,
+missing-data policy, range, applicability and the condition under which it is
+undefined; the registry is written as `metric_dictionary.json` with every run.
+Provenance (input SHA-256, version, parameters, seed, dependency versions,
+coordinate convention) is written to `summary.json`, `parameters.yaml` and
+`run_manifest.json`.
 
-# Supported Inputs and Outputs
+The CLI (`msatk profile|stats|qc|plot|logo|encode|image|...`) and the Python API
+(`AlignmentProfiler.summary()`, `.sites()`, `.sequences()`, `.pairwise()`, `.qc()`,
+`.plot_alignment()`, `.to_tensor()`, `.report()`) call the same cached engine.
 
-MSATK supports common multiple-alignment and alignment-derived formats, including FASTA and aligned FASTA, PHYLIP and relaxed PHYLIP, NEXUS matrix blocks, CLUSTAL, Stockholm, A3M, MAF, SAM, and BAM/CRAM-derived summaries through the optional `pysam` dependency. Supported analysis modes include nucleotide, RNA, protein, codon, translated CDS-like, mixed, and auto-detected inputs.
+# 3 Functionality
 
-Each profiling run writes a reproducible output directory:
+<!-- ~450 words -->
 
-```text
-msatk_results/
-|-- report.html
-|-- report.md
-|-- summary.json
-|-- parameters.yaml
-|-- msatk.log
-|-- qc_warnings.txt
-|-- assets/
-|-- tables/
-`-- figures/
-```
+**Quality control.** Sixteen explicit rules produce findings with a code,
+severity, explanation, suggested action and the affected sequences or sites (e.g.
+high-gap rows or columns, divergent or compositionally atypical sequences,
+non-overlapping pairs, internal stop codons, partially gapped codons).
 
-Core tables include `alignment_summary.csv`, `per_sequence_stats.csv`, `per_site_stats.csv`, `pairwise_identity_matrix.csv`, `distance_matrix.csv`, `composition_summary.csv`, `entropy_by_site.csv`, `sequence_embeddings.csv`, and `qc_flags.csv`. Codon-aware runs additionally write `codon_usage.csv`, `rscu.csv`, `codon_position_gc.csv`, `codon_position_entropy.csv`, `stop_codon_report.csv`, and `translated_amino_acid_summary.csv`. Protein runs write amino-acid composition, residue-class, and hydrophobicity summaries.
+**Codon and protein modules.** Codon alignments add codon usage, RSCU
+[@sharp1986rscu], GC1/GC2/GC3, codon-position entropy and stop-codon reports;
+protein alignments add amino-acid and residue-class composition and Kyte–Doolittle
+hydropathy [@kyte1982hydropathy].
 
-# Implementation
+**Visualization.** Residue-level alignment figures show a region with consensus row,
+conservation/entropy/gap tracks, row ordering and difference highlighting; sequence
+logos use the small-sample-corrected information content [@schneider1986]. Themes
+(including a colour-vision-deficiency-safe palette) are configurable via JSON/YAML,
+and figures are written as PNG, SVG, PDF or TIFF via Matplotlib [@hunter2007matplotlib].
 
-MSATK is implemented in Python and organized as modular layers for input parsing, validation, molecule-type detection, statistics, codon analysis, protein analysis, plotting, embeddings, report generation, and output writing. The internal workflow is:
+**Interactive report.** `report.html` requires no server or network access. It
+embeds the data as JSON and provides a canvas residue viewer (scroll, zoom, ID
+search, jump-to-site, colouring by residue or difference from consensus), clickable
+site tracks, sortable and filterable tables with CSV export, a pairwise heatmap,
+QC findings, provenance and the metric dictionary; a single-file mode embeds figures.
 
-```text
-Input reader -> validation -> detection -> statistics -> plotting -> reporting -> output writer
-```
+**ML representations.** MSATK keeps human-facing RGB images separate from faithful
+encodings: a categorical encoding over a full IUPAC/amino-acid vocabulary that is
+exactly reversible; one-hot channels with explicit gap and missing channels and a
+choice of ambiguity policy (missing, fractional IUPAC expansion, or separate
+channel); physicochemical channels for proteins [@kyte1982hydropathy;
+@zamyatnin1972]; and per-cell QC feature channels. Instead of resizing, alignments
+are cut into integer-exact windows with padding masks and per-tile original
+coordinates. Every export carries a manifest, and a framework-agnostic dataset class
+feeds PyTorch or TensorFlow directly.
 
-The core package uses lightweight internal parsers for common MSA formats. Optional dependencies extend the user experience: pandas [@mckinney2010pandas] provides notebook-friendly DataFrame outputs, Matplotlib [@hunter2007matplotlib] enables PNG figures, scikit-learn [@pedregosa2011scikit] enables dimensionality-reduction embeddings, and pysam [@pysam] enables BAM and CRAM parsing through HTSlib-compatible interfaces.
+# 4 Results
 
-The validation layer supports permissive and strict modes. In permissive mode, MSATK warns and continues where scientifically reasonable, for example by padding unequal sequence lengths for site-level summaries. In strict mode, duplicate identifiers, invalid characters, and unequal sequence lengths raise explicit validation errors. Command-line options expose these behaviors through `--permissive` and `--strict`.
+<!-- ~450 words -->
 
-Each run records the MSATK version, Python version, platform, input path, detected format, detected molecule type, command-line parameters, timestamp, validation mode, and output schema version. These metadata make the output directory suitable for workflow automation, manuscript supplements, and later audit.
+**Correctness.** The test suite (93 tests) checks hand-calculated values for
+edge cases including all-gap columns, non-overlapping pairs, padding, molecule-specific
+interpretation of `N`, entropy bounds, parsimony and singleton definitions and gap
+runs. Nucleotide diversity, Watterson's θ and Tajima's D agree with scikit-allel to
+floating-point precision on randomly generated populations. Categorical encodings
+reconstruct the input alignment exactly, and one-hot cells sum to one under every
+ambiguity policy.
 
-# Alignment Statistics and Quality Control
+**Performance.** On an Apple M1 Pro (16 GB), computing all statistics without
+pairwise comparison took 0.23 s for 100 × 10,000, 1.0 s for 1,000 × 10,000 and
+4.4 s (1.2 GB peak memory) for 5,000 × 10,000 alignments, scaling linearly with the
+number of cells. Exact all-vs-all identity for 5,000 sequences (12.5 million pairs)
+added about 4 s; the default sampled policy added 0.3 s (`docs/benchmarks.md`).
 
-MSATK computes alignment-wide, per-sequence, and per-site summaries. Alignment-level metrics include sequence count, alignment length, rectangularity, gap fraction, conserved sites, variable sites, parsimony-informative sites, singleton sites, mean pairwise identity, mean pairwise distance, entropy summaries, and GC content for nucleotide-like alignments.
+**Comparison with existing tools.** [TODO: agreement of shared metrics — alignment
+length, missing-data proportion, variable and parsimony-informative sites — with
+AMAS and AliStat on public DNA and protein alignments; runtime on the same inputs;
+feature-coverage table versus AMAS, AliStat, CIAlign, trimAl and Jalview, moved to
+the Supplement.]
 
-Per-sequence outputs include raw length, ungapped length, gap count, gap fraction, ambiguous-character count, ambiguous-character fraction, GC content, unique residue count, mean identity to other sequences, and a simple outlier score. These values help identify short, gap-rich, ambiguous, compositionally unusual, or low-similarity sequences.
+**Use cases.** [TODO: (i) a viral coding-sequence alignment: frame integrity, codon
+usage, positional entropy, outlier sequences and the QC report before selection
+analysis; (ii) a protein-family alignment: physicochemical conservation, clustering,
+alignment figures and windowed tensor export loaded by PyTorch.]
 
-Per-site outputs include dominant character, dominant-character frequency, gap fraction, missing fraction, Shannon entropy [@shannon1948], conservation score, observed-state count, variable-site status, parsimony-informative status, singleton status, and codon position. These summaries support trimming decisions, downstream masking, and inspection of highly variable or poorly covered regions.
+**Figure 1.** [TODO: four panels built from real MSATK outputs — (A) architecture;
+(B) statistical outputs/site tracks; (C) residue-level alignment figure with logo;
+(D) ML encodings and windows with manifest.]
 
-Quality-control warnings are written to the terminal, report, `summary.json`, and `qc_warnings.txt`. Warnings include inconsistent sequence lengths, high-gap sequences, high-gap sites, codon alignment lengths not divisible by three, internal stop codons, and unusually low mean identity to the rest of the alignment.
+# 5 Discussion
 
-# Codon-Aware and Protein-Specific Summaries
+<!-- ~150 words -->
 
-For codon-aware alignments, MSATK reports codon usage, relative synonymous codon usage (RSCU), codon-position GC content, codon-position entropy, stop codons, and translated amino-acid summaries. RSCU summarizes observed codon use relative to expected use within synonymous codon families [@sharp1986rscu]. Frame-related warnings help users detect alignments that may be unsuitable for downstream selection-analysis tools.
+MSATK's contribution is not any single statistic but a reproducible
+alignment-to-analysis layer in which conventions are explicit, outputs are defined
+and machine-readable, and the same engine drives statistics, figures, reports and
+ML encodings. MSATK does not build, trim or edit alignments, and it does not perform
+model-based evolutionary inference; it complements aligners, trimmers and
+phylogenetic software. Population-genetic statistics assume homologous population
+samples and use complete sites only. The interactive viewer is limited to alignments
+of up to three million cells, and alignments much larger than memory require
+streaming, which is planned together with coevolution statistics and alternative
+genetic codes.
 
-For protein alignments, MSATK reports amino-acid composition, residue-class composition, hydrophobicity summaries using the Kyte-Doolittle scale [@kyte1982hydropathy], site-level entropy, conservation, and pairwise identity. These summaries provide rapid context for protein-family alignments before structural, functional, or evolutionary interpretation.
+# Availability and implementation
 
-Visualization and reporting functions produce gap profiles, entropy plots, conservation plots, composition plots, pairwise identity heatmaps, pairwise distance distributions, pairwise identity distributions, and sequence embeddings when the relevant optional dependencies are available. HTML and Markdown reports combine these plots with summary statistics, warnings, and plain-language interpretations.
-
-# Example Applications
-
-To demonstrate MSATK on a coding-sequence alignment, a user can run:
-
-```bash
-msatk profile tests/data/codon/valid_codon_alignment.fasta --type codon --out codon_results --force
-```
-
-MSATK detects a codon-aware nucleotide alignment, reports sequence count and alignment length, computes missingness, summarizes variable sites and mean pairwise identity, and writes codon-specific tables including codon usage, RSCU, codon-position GC, codon-position entropy, stop-codon reports, and translated amino-acid summaries. A related fixture containing an internal stop codon triggers a plain-language warning identifying the affected sequence. These outputs provide a compact pre-analysis check before running selection-analysis tools such as HyPhy or PAML.
-
-The same workflow can be applied to protein alignments:
-
-```bash
-msatk protein tests/data/protein/protein_with_gaps.faa --out protein_results --force
-```
-
-In this mode, MSATK writes amino-acid composition, residue-class, hydrophobicity, pairwise identity, entropy, and conservation summaries. For workflow developers, all outputs use deterministic filenames under a single output directory, allowing direct integration with Snakemake, Nextflow, or HPC batch jobs.
-
-# Availability and Installation
-
-MSATK is freely available under the MIT License at `https://github.com/aglucaci/MSATK`. The version described in this manuscript is v0.1.0. Source installation and editable development installation are supported with:
-
-```bash
-pip install -e ".[dev,all,docs]"
-```
-
-MSATK includes a local Conda recipe and a Bioconda submission template. The intended bioinformatics-native installation path is:
-
-```bash
-mamba install -c bioconda -c conda-forge msatk
-```
-
-Until a Bioconda package is published, users can create a Conda-managed environment from the provided `environment.yml` and install MSATK from source or PyPI. Documentation, synthetic test datasets, GitHub Actions workflows, and release checklists are included with the repository.
-
-# Testing and Reproducibility
-
-The repository includes unit tests, integration tests, regression tests, synthetic alignment fixtures, documentation checks, packaging files, and continuous integration workflows. Test data cover FASTA, aligned FASTA, A3M, PHYLIP, relaxed PHYLIP, CLUSTAL, Stockholm, NEXUS, MAF, SAM, and optional BAM/CRAM fixtures where HTSlib-compatible tooling is available.
-
-MSATK outputs are designed to be reproducible and workflow-friendly. The output directory contains stable filenames, versioned `summary.json`, `parameters.yaml`, `msatk.log`, CSV tables, reports, and optional figures. Continuous integration runs tests across supported Python versions, checks type annotations with mypy, validates style with Ruff, builds documentation, and exercises Conda packaging.
-
-# Discussion
-
-MSATK contributes a standardized profiling and reporting layer for multiple sequence alignments. It lowers the barrier to alignment quality control by turning an input alignment into a coherent set of statistics, warnings, tables, figures, and reports with one command. This is useful for teaching, exploratory data analysis, manuscript supplementary materials, and production bioinformatics workflows.
-
-MSATK complements, rather than replaces, existing tools:
-
-| Tool | Alignment construction | Visualization | QC report | Codon summaries | Reproducible tables |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| MAFFT | Yes | No | No | No | No |
-| Jalview | No | Yes | Limited | Limited | Limited |
-| trimAl | No | No | Partial | No | Partial |
-| HyPhy | No | No | No | Yes, downstream | Yes |
-| MSATK | No | Report-based | Yes | Yes | Yes |
-
-MSATK is not intended to construct alignments, infer phylogenies, perform formal selection analysis, or replace manual inspection of complex alignments. Its main role is the intermediate quality-control and reporting step between alignment generation and downstream biological inference. Current limitations include the computational cost of pairwise summaries for very large alignments and the need for further validation on large pangenome, metagenomic, and surveillance-scale datasets.
-
-Future development will focus on interactive reports, more scalable pairwise computations, richer outlier detection, expanded workflow wrappers, Galaxy integration, containerized deployments, and stronger support for very large alignments.
-
-# Conclusion
-
-MSATK provides a lightweight, reproducible, and user-friendly framework for profiling multiple sequence alignments. By combining alignment statistics, quality-control warnings, codon-aware summaries, protein summaries, visualizations, and standalone reports, MSATK helps researchers rapidly assess alignment quality and prepare data for evolutionary, comparative, and functional analyses.
-
-# Acknowledgements
-
-MSATK builds on the broader open-source scientific Python and bioinformatics ecosystem. The author thanks contributors to Python, pandas, Matplotlib, scikit-learn, pysam, and the alignment and evolutionary-analysis tools that motivate reproducible alignment quality-control workflows.
+MSATK v0.2.0 is available at https://github.com/aglucaci/MSATK under the MIT licence
+and installable with `pip install msatk`; documentation, the metric dictionary,
+tests and the benchmark harness are included in the repository.
 
 # Funding
 

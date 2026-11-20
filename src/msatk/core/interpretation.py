@@ -13,7 +13,12 @@ def interpret_summary(summary: dict[str, Any], warnings: list[str]) -> str:
     molecule = str(summary.get("molecule_type", "unknown"))
     gap_fraction = float(summary.get("gap_fraction") or 0.0)
     variable = int(summary.get("variable_sites", 0))
-    identity = float(summary.get("mean_pairwise_identity") or 0.0)
+    pairwise = summary.get("mean_pairwise_identity")
+    consensus = summary.get("mean_consensus_identity")
+    identity = float(pairwise if pairwise is not None else (consensus or 0.0))
+    identity_label = (
+        "mean pairwise identity" if pairwise is not None else "mean identity to consensus"
+    )
 
     completeness = (
         "Overall missingness is low"
@@ -39,7 +44,7 @@ def interpret_summary(summary: dict[str, Any], warnings: list[str]) -> str:
     )
     return (
         f"This {molecule} alignment contains {nseq:,} sequences and {length:,} sites, with "
-        f"{variable:,} variable sites and mean pairwise identity of {identity:.1%}. "
+        f"{variable:,} variable sites and {identity_label} of {identity:.1%}. "
         f"{completeness} at {gap_fraction:.1%}, {suitability}.{codon_note}{warning_note}"
     )
 

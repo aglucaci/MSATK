@@ -17,3 +17,7 @@ class AlignmentValidationError(MSATKError):
 
 class CodonAlignmentError(MSATKError):
     """Raised when codon-aware analysis cannot be performed safely."""
+
+
+class MissingDependencyError(MSATKError):
+    """Raised when an optional dependency required for the requested analysis is missing."""

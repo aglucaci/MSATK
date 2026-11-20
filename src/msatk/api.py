@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from msatk.core.profiler import MSATK
 
@@ -17,14 +18,35 @@ def profile_alignment(
     report: bool = True,
     tables: bool = True,
     validation_mode: str = "permissive",
-) -> dict[str, object]:
-    """Profile an alignment with the same sensible defaults as ``msatk profile``."""
+    pairwise: str = "auto",
+    preset: str | None = None,
+    plot_formats: str = "png",
+    self_contained: bool = False,
+    embeddings: str | None = None,
+    encodings: list[str] | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Profile an alignment with the same defaults as ``msatk profile``."""
 
     profiler = MSATK(
-        alignment, sequence_type=sequence_type, fmt=fmt, validation_mode=validation_mode
+        alignment,
+        sequence_type=sequence_type,
+        fmt=fmt,
+        validation_mode=validation_mode,
+        pairwise=pairwise,
     )
     return profiler.write_outputs(
-        outdir=outdir, force=force, plots=plots, report=report, tables=tables
+        outdir=outdir,
+        force=force,
+        plots=plots,
+        report=report,
+        tables=tables,
+        preset=preset,
+        plot_formats=plot_formats,
+        self_contained=self_contained,
+        embeddings_method=embeddings,
+        encodings=encodings,
+        **kwargs,
     )
 
 

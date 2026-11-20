@@ -1,55 +1,104 @@
 # MSATK CLI
 
-The primary command is:
+All commands share one analysis engine, so the CLI, the Python API and the reports
+always agree. Run `msatk <command> --help` for every option.
+
+| Command | Purpose |
+|---|---|
+| `msatk profile` | Full profile: statistics, QC, figures, offline HTML report |
+| `msatk stats` | One statistics table (summary, site, sequence, pairwise, composition, gaps) to stdout/file |
+| `msatk qc` | QC findings and flag tables |
+| `msatk plot` | Residue-level alignment figure (PNG/SVG/PDF/TIFF) |
+| `msatk logo` | Sequence logo for a region |
+| `msatk encode` | ML tensors (NPZ) + manifest |
+| `msatk image` | RGB or lossless label image + manifest |
+| `msatk embed` | 2-D sequence embedding (PCA, UMAP, t-SNE) |
+| `msatk codon` / `msatk protein` | Molecule-specific profiles |
+| `msatk report` | Rebuild the report from an output directory |
+| `msatk metrics` | Print the metric dictionary |
+| `msatk demo` | Profile a bundled example |
+
+Common input options: `--type {auto,dna,rna,protein,codon,translated_cds,mixed}` and
+`--format auto`. Supported inputs: FASTA/aligned FASTA, A3M, PHYLIP/relaxed PHYLIP,
+CLUSTAL, Stockholm, NEXUS, MAF, SAM, BAM and CRAM (BAM/CRAM require `pysam`).
+
+## profile
 
 ```bash
-msatk profile alignment.fasta
+msatk profile alignment.fasta --out results/
+msatk profile alignment.fasta --preset basic            # fastest: no pairwise comparison
+msatk profile alignment.fasta --preset comprehensive    # exact pairwise, PCA, SVG, ML tensors
+msatk profile alignment.fasta --plots png,svg,pdf --self-contained
+msatk profile alignment.fasta --pairwise sampled --sample-pairs 50000 --seed 1
+msatk profile alignment.fasta --embeddings umap --encodings onehot,features
 ```
 
-It writes a FastQC-like directory named `<input_stem>_msatk/` unless `--out` is provided.
+| Option | Meaning |
+|---|---|
+| `--preset basic\|standard\|comprehensive` | Computation profile (see below) |
+| `--pairwise auto\|exact\|sampled\|none` | Pairwise identity policy. `auto` = exact up to `--max-exact-sequences` (1000), deterministic sample of `--sample-pairs` (20,000) above |
+| `--plots png,svg,pdf,tiff\|none` | Figure formats. Unsupported formats are rejected |
+| `--no-alignment-figure` | Skip the residue-level overview and logo |
+| `--embeddings none\|pca\|umap\|tsne` | Optional embedding (off by default). Missing dependencies raise an error rather than silently substituting PCA |
+| `--encodings categorical,onehot,...` | Also export ML tensors to `ml/` |
+| `--self-contained` | Embed figures so `report.html` is a single portable file |
+| `--strict` | Fail on duplicate IDs, unequal lengths or invalid characters |
+| `--max-gap-seq`, `--max-gap-site` | QC thresholds |
 
-Supported inputs include FASTA/aligned FASTA, A3M, PHYLIP/relaxed PHYLIP, CLUSTAL, Stockholm, NEXUS, MAF, SAM, BAM, and CRAM. BAM/CRAM support requires `pysam`.
+Presets:
 
-MSATK automatically reports detected file format, molecule type, alignment length, length consistency, stop-codon presence, frameshift warnings, and codon-aware status in `summary.json`.
+| Preset | Pairwise | Figures | Extras |
+|---|---|---|---|
+| `basic` | none | PNG, no alignment overview | — |
+| `standard` (default behaviour) | auto | PNG + alignment overview + logo | — |
+| `comprehensive` | exact | PNG + SVG | PCA embedding, categorical + one-hot tensors |
 
-## Profile
+## stats
 
 ```bash
-msatk profile alignment.fasta --out msatk_results/
+msatk stats alignment.fasta --level site > sites.csv
+msatk stats alignment.fasta --level sequence --output-format tsv --out sequences.tsv
+msatk stats alignment.fasta --level summary --output-format json
+msatk stats alignment.fasta --level pairwise --out pairs.csv
 ```
 
-## QC
+## qc
 
 ```bash
-msatk qc alignment.fasta --out qc_results/ --max-gap-seq 0.3 --max-gap-site 0.5
+msatk qc alignment.fasta --out qc/ --max-gap-seq 0.3 --max-gap-site 0.5
 ```
 
-## Codon
+Prints severity-ranked findings and writes `qc_findings.{csv,json}`, `qc_flags.csv` and `qc_warnings.txt`.
+
+## plot and logo
 
 ```bash
-msatk codon cds_alignment.fasta --out codon_results/
+msatk plot alignment.fasta --start 1 --end 300 --out region.svg
+msatk plot proteins.faa --order consensus_identity --highlight-differences --tracks conservation,entropy,gaps --out fig.pdf
+msatk plot alignment.fasta --theme my_colours.yaml --no-letters --max-rows 100 --out overview.png
+msatk logo alignment.fasta --start 40 --end 80 --out logo.pdf
 ```
 
-## Protein
+Themes: `nucleotide`, `nucleotide_cvd` (colour-vision-deficiency safe), `protein`,
+`grayscale`, or a JSON/YAML file mapping symbols to hex colours.
+
+## encode and image
 
 ```bash
-msatk protein proteins.faa --out protein_results/
+msatk encode alignment.fasta --encoding onehot --out ml/
+msatk encode alignment.fasta --encoding onehot --ambiguity fractional --window 256 --stride 128 --out ml/
+msatk encode proteins.faa --encoding physicochemical --label family=PF00001 --out ml/
+msatk image alignment.fasta --kind rgb --scale 4 --out alignment.png
+msatk image alignment.fasta --kind label --out alignment_labels.png
+msatk image alignment.fasta --size 224x224 --out alignment_224.png   # lossy, recorded in manifest
 ```
 
-## Embeddings
+See [ML encodings](ml_encodings.md).
+
+## report, demo, metrics
 
 ```bash
-msatk embed alignment.fasta --method pca --representation onehot --out embeddings/
-```
-
-## Report
-
-```bash
-msatk report msatk_results/ --format html
-```
-
-## Demo
-
-```bash
+msatk report results/ --self-contained
 msatk demo
+msatk metrics --format json > metrics.json
 ```

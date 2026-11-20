@@ -47,7 +47,20 @@ class Alignment:
         lengths = {len(record.sequence) for record in self.records}
         return len(lengths) == 1
 
-    def padded_sequences(self, pad: str = "-") -> list[str]:
+    @property
+    def padded_cells(self) -> int:
+        """Number of cells added to reach a rectangular matrix (0 for a true alignment)."""
+
+        width = self.length
+        return sum(width - len(record.sequence) for record in self.records)
+
+    def padded_sequences(self, pad: str = "?") -> list[str]:
+        """Return equal-width sequences.
+
+        Unequal-length input is padded with ``?`` (missing data) rather than ``-`` so that
+        artificial padding is never presented as a biological alignment gap.
+        """
+
         width = self.length
         return [record.sequence.ljust(width, pad) for record in self.records]
 

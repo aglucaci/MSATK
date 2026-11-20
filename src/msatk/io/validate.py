@@ -25,7 +25,8 @@ def validate_alignment(alignment: Alignment, mode: str = "permissive") -> list[s
         issues.append(f"Duplicate sequence IDs detected: {', '.join(duplicates)}")
     if not alignment.is_rectangular:
         issues.append(
-            "Sequence lengths are unequal; MSATK will pad shorter sequences in permissive mode."
+            "Sequence lengths are unequal; in permissive mode MSATK pads shorter sequences with "
+            "missing data ('?'), never with alignment gaps."
         )
     invalid = sorted(
         {ch for seq in alignment.sequences for ch in seq.upper() if ch not in VALID_ALIGNMENT_CHARS}
