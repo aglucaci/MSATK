@@ -107,21 +107,25 @@ def plot_alignment(
     labels = (["Consensus", ""] if show_consensus else []) + sub.ids
     letters = show_letters if show_letters is not None else (width <= 150 and n <= 120)
 
+    # Tracks describe the whole alignment at the displayed columns, not just the rows
+    # drawn, so subsetting or truncating rows never changes them.
     track_data = []
-    arrays = site_arrays(enc)
+    full = site_arrays(full_enc)
+    idx = np.array(coords.original_sites) - 1
+    n_all = max(full_enc.n, 1)
+    observed = full["observed"][idx]
     for name in tracks:
         if name == "conservation":
-            track_data.append(
-                ("Conservation", np.nan_to_num(arrays["dominant_frequency"], nan=0.0))
-            )
+            support = np.nan_to_num(full["dominant_frequency"][idx], nan=0.0) * observed / n_all
+            track_data.append(("Consensus\nsupport", support))
         elif name == "gaps":
-            track_data.append(("Gap fraction", arrays["gaps"] / max(n, 1)))
+            track_data.append(("Gap fraction", full["gaps"][idx] / n_all))
         elif name == "entropy":
             track_data.append(
-                ("Norm. entropy", np.nan_to_num(arrays["normalized_entropy"], nan=0.0))
+                ("Norm. entropy", np.nan_to_num(full["normalized_entropy"][idx], nan=0.0))
             )
         elif name == "occupancy":
-            track_data.append(("Occupancy", arrays["observed"] / max(n, 1)))
+            track_data.append(("Occupancy", observed / n_all))
         else:
             raise ValueError(f"Unknown track {name!r}")
 

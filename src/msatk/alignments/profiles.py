@@ -30,7 +30,7 @@ class ProfileModel:
     def state_rows(self) -> list[dict[str, Any]]:
         rows = []
         for k, probs in enumerate(self.match_emissions, start=1):
-            ent = -sum(p * math.log2(p) for p in probs if p > 0)
+            ent = max(0.0, -sum(p * math.log2(p) for p in probs if p > 0))
             ic = None
             if self.composition:
                 ic = sum(

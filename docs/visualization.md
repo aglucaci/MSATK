@@ -24,6 +24,12 @@ The output format follows the file suffix (PNG, SVG, PDF, TIFF, JPEG). For large
 alignments render a region: whole-genome matrices compressed into one image are
 not readable. Letters are drawn automatically when the region is small enough.
 
+Tracks always describe the **whole alignment** at the displayed columns, so they do not
+change when rows are subset or truncated. The `conservation` track ("consensus support")
+is the fraction of *all* sequences that carry the consensus residue, so a column filled by
+only a few sequences cannot look perfectly conserved. `gaps`, `entropy` and `occupancy`
+are the per-site gap fraction, normalised entropy and residue occupancy.
+
 Custom colour themes are JSON or YAML mappings of symbol → hex colour:
 
 ```yaml

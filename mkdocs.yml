@@ -8,6 +8,15 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Quickstart: quickstart.md
+  - Tutorials:
+      - Overview: tutorials/index.md
+      - 1. Profile an alignment: tutorials/01_quickstart.md
+      - 2. Statistics in Python: tutorials/02_statistics_python.md
+      - 3. Viral codon QC: tutorials/03_viral_codon_qc.md
+      - 4. Protein families and figures: tutorials/04_protein_family_figures.md
+      - 5. ML representations: tutorials/05_ml_encodings.md
+      - 6. RNA, profiles, partitions, pairs: tutorials/06_annotated_alignments.md
+      - 7. Beyond MSAs: tutorials/07_beyond_msas.md
   - CLI: CLI.md
   - Python API: python_api.md
   - Outputs: outputs.md
@@ -25,3 +34,7 @@ nav:
   - Contributing: contributing.md
   - Release Checklist: release_checklist.md
   - Roadmap: ROADMAP.md
+
+exclude_docs: |
+  tutorials/_src/
+  tutorials/build.py

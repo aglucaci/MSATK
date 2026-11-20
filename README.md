@@ -325,6 +325,20 @@ codon usage, RSCU, GC1/GC2/GC3, stop-codon reports, amino-acid composition,
 residue classes and hydropathy. When pandas is installed, tables are returned as
 DataFrames; otherwise as lists of dictionaries. See [docs/python_api.md](docs/python_api.md).
 
+## Tutorials
+
+Seven hands-on tutorials in [`docs/tutorials/`](docs/tutorials/index.md) run on data
+bundled with the package (`msatk datasets`). The outputs shown were produced by running
+the code:
+
+1. [Profile an alignment in one command](docs/tutorials/01_quickstart.md)
+2. [Alignment statistics in Python](docs/tutorials/02_statistics_python.md)
+3. [QC of a viral coding alignment](docs/tutorials/03_viral_codon_qc.md): 400 influenza HA sequences
+4. [Protein families and publication figures](docs/tutorials/04_protein_family_figures.md)
+5. [Machine-learning representations](docs/tutorials/05_ml_encodings.md)
+6. [RNA structure, profiles, partitions and pairwise alignments](docs/tutorials/06_annotated_alignments.md)
+7. [Beyond MSAs: genome blocks, reads, hits, graphs, profile HMMs](docs/tutorials/07_beyond_msas.md)
+
 ## Documentation
 
 - [Statistical conventions](docs/statistics.md) and [metric dictionary](docs/metrics.md)

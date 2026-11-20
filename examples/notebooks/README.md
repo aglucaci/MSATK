@@ -1,11 +1,13 @@
-# MSATK Notebooks
+# MSATK examples
 
-This directory is reserved for notebook examples. Start with:
+Runnable, worked examples are in the tutorials:
+[`docs/tutorials/`](../../docs/tutorials/index.md). They use datasets bundled with
+the package:
 
 ```python
-from msatk import MSATK
+from msatk import MSATK, datasets
 
-profiler = MSATK("../dna/tiny_dna.fasta")
-summary = profiler.summary()
-per_site = profiler.per_site_stats()
+msa = MSATK(datasets.path("ras_pf00071"))
+summary = msa.summary()
+sites = msa.sites()
 ```

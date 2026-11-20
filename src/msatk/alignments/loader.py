@@ -159,6 +159,21 @@ def load_alignment(
     return parser(read_text(source), str(source))
 
 
+def _sequence_analyses(molecule_type: str) -> list[str]:
+    items = [
+        "alignment/site/sequence/pair statistics",
+        "QC findings",
+        "alignment figures, logos, HTML report, ML encodings",
+    ]
+    if molecule_type in {"dna", "rna", "codon"}:
+        items.append("population genetics (π, θW, Tajima's D, haplotypes, Ts/Tv)")
+    if molecule_type == "codon":
+        items.append("codon usage, RSCU, frames and stop codons (selectable genetic code)")
+    if molecule_type in {"protein", "translated_cds"}:
+        items.append("amino-acid composition, physicochemical and BLOSUM62 scores")
+    return items
+
+
 def inspect_alignment(path: str | Path, fmt: str = "auto", **kwargs: Any) -> dict[str, Any]:
     """Describe what an input contains and which analyses are valid for it."""
 
@@ -190,6 +205,7 @@ def inspect_alignment(path: str | Path, fmt: str = "auto", **kwargs: Any) -> dic
             obj.alignment, obj.molecule_type, pairwise="none", genetic_code=obj.genetic_code
         )
         _, _, why = specialized_analyses(bundle, obj.molecule_type, obj.annotations, obj.partitions)
+        info["valid_analyses"] = _sequence_analyses(obj.molecule_type)
         info.update(
             {
                 "molecule_type": obj.molecule_type,

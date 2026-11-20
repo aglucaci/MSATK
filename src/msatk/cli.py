@@ -31,6 +31,7 @@ EPILOG = """examples:
   msatk profile cds.fasta --type codon --genetic-code 2
   msatk profile supermatrix.phy --partitions partitions.txt
   msatk formats
+  msatk datasets ras_pf00071 h3n2_ha --out data/
   msatk demo
 """
 
@@ -260,6 +261,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     formats.add_argument("--format", default="markdown", choices=["markdown", "json"])
     formats.set_defaults(func=cmd_formats)
+
+    data = sub.add_parser("datasets", help="List bundled tutorial datasets or copy them locally.")
+    data.add_argument("names", nargs="*", help="Datasets to copy (default: list them).")
+    data.add_argument("--out", default="msatk_data", help="Directory to copy datasets into.")
+    data.set_defaults(func=cmd_datasets)
     return parser
 
 
@@ -669,6 +675,26 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         for item in info["not_computed_by_design"]:
             print(f"    - {item}")
     print(f"\n  status: {info['status']}\n")
+    return 0
+
+
+def cmd_datasets(args: argparse.Namespace) -> int:
+    from msatk import datasets
+
+    if not args.names:
+        for d in datasets.list_datasets():
+            print(f"{d['name']:<18} {d['kind']:<24} {d['description']}")
+        return 0
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    for name in args.names:
+        try:
+            src = datasets.path(name)
+        except KeyError as exc:
+            _print_error(exc)
+            return 2
+        shutil.copyfile(src, out / src.name)
+        print(out / src.name)
     return 0
 
 

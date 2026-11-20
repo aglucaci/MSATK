@@ -1,5 +1,6 @@
 """MSATK: Multiple Sequence Alignment Toolkit."""
 
+from . import datasets
 from .alignments import inspect_alignment, load_alignment
 from .api import profile_alignment
 from .codon.profiler import CodonProfiler
@@ -17,6 +18,7 @@ __all__ = [
     "ProteinProfiler",
     "profile_alignment",
     "load_alignment",
+    "datasets",
     "inspect_alignment",
     "__version__",
 ]

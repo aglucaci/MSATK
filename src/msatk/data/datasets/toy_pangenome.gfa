@@ -1,0 +1,13 @@
+H	VN:Z:1.0
+S	s1	ACGTACGTAC	SN:Z:ref	SO:i:0	SR:i:0
+S	s2	GG	SN:Z:ref	SO:i:10	SR:i:0
+S	s3	TTTT	SN:Z:alt	SO:i:0	SR:i:1
+S	s4	ACGTA	SN:Z:ref	SO:i:12	SR:i:0
+S	s5	*	LN:i:3
+L	s1	+	s2	+	0M
+L	s1	+	s3	+	0M
+L	s2	+	s4	+	0M
+L	s3	+	s4	+	0M
+P	hap1	s1+,s2+,s4+	*
+P	hap2	s1+,s3+,s4+	*
+W	sampleC	1	chr1	0	19	>s1>s3>s4
