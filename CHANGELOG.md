@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+Alignment families, formats and capability registry:
+
+- New data models with a unified loader (`msatk.load_alignment`, `msatk.inspect_alignment`):
+  `SequenceAlignment`, `BlockAlignment` (MAF, XMFA, AXT), `ReadAlignment` (SAM; BAM/CRAM via
+  pysam), `MappingAlignment` (PAF, PSL, BLAST tabular, GAF), `GraphAlignment` (GFA 1, rGFA)
+  and `ProfileModel` (HMMER3, HHM). Each is analysed with statistics valid for it; blocks are
+  never concatenated, reads are not treated as MSA rows and graphs are not flattened.
+- New sequence formats: A2M, MSF/GCG, MEGA, SELEX, MASE and EMBOSS pairwise output;
+  A3M/A2M insert states are preserved (previously dropped). Gzip input everywhere.
+- Specialized analyses that run only when valid, with the reason recorded in
+  `analysis_applicability`: pairwise-alignment statistics (N = 2), BLOSUM62 column scores
+  (proteins), RNA base-pair conservation and covariation (`#=GC SS_cons`), profile
+  match/insert states (A2M/A3M, `#=GC RF`), and per-partition statistics with a χ²
+  compositional-homogeneity test (NEXUS charsets or `--partitions`).
+- All NCBI genetic codes (`--genetic-code`), used for stop codons, frame QC, codon usage,
+  RSCU and translation.
+- Machine-readable capability registry (`msatk.alignments.registry`) with support levels;
+  `msatk formats` generates `docs/compatibility.md`, and tests check every declared format
+  against a fixture.
+- New commands: `msatk inspect`, `msatk formats`; `msatk profile` dispatches by data model.
+- Metric dictionary extended to 383 definitions across 25 levels.
+
+Behaviour changes:
+
+- `msatk profile` on SAM/BAM/CRAM now writes read-alignment QC instead of a pileup MSA
+  profile; `read_alignment()` keeps the legacy reference-anchored pileup.
+- `read_alignment()` raises on multi-block MAF instead of concatenating blocks.
+- `tests/data/formats/tiny.a3m` was invalid A3M (a match-state gap where other rows had an
+  insertion) and has been corrected.
+
 ## 0.2.0 - 2026-11-20
 
 Scientific semantics (breaking output-schema changes; schema version 2.0):

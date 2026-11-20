@@ -18,9 +18,24 @@ always agree. Run `msatk <command> --help` for every option.
 | `msatk metrics` | Print the metric dictionary |
 | `msatk demo` | Profile a bundled example |
 
-Common input options: `--type {auto,dna,rna,protein,codon,translated_cds,mixed}` and
-`--format auto`. Supported inputs: FASTA/aligned FASTA, A3M, PHYLIP/relaxed PHYLIP,
-CLUSTAL, Stockholm, NEXUS, MAF, SAM, BAM and CRAM (BAM/CRAM require `pysam`).
+Common input options: `--type {auto,dna,rna,protein,codon,translated_cds,mixed}`,
+`--format auto`, `--genetic-code N` (NCBI table, default 1) and `--partitions FILE`
+(RAxML/IQ-TREE partition file or NEXUS charsets). Inputs may be gzip-compressed. See
+[Alignment types](alignment_types.md) and [Compatibility](compatibility.md) for every
+supported format and data model.
+
+## inspect and formats
+
+```bash
+msatk inspect genomes.maf.gz          # format, data model, contents, valid analyses
+msatk inspect reads.bam --json
+msatk formats                         # compatibility matrix (Markdown)
+msatk formats --format json           # machine-readable capability registry
+```
+
+`inspect` reports the detected format and support level, the data model, what the file
+contains, the specialized analyses that apply (and why others do not), and what is not
+computed by design.
 
 ## profile
 
@@ -44,6 +59,14 @@ msatk profile alignment.fasta --embeddings umap --encodings onehot,features
 | `--self-contained` | Embed figures so `report.html` is a single portable file |
 | `--strict` | Fail on duplicate IDs, unequal lengths or invalid characters |
 | `--max-gap-seq`, `--max-gap-site` | QC thresholds |
+| `--genetic-code N` | NCBI translation table for stop codons, frames, codon usage and RSCU |
+| `--partitions FILE` | Per-partition statistics (`partitions.csv`) |
+| `--reference FASTA` | Reference for CRAM input |
+
+`profile` dispatches on the data model. Sequence alignments get the full profile below.
+Block (MAF/XMFA/AXT), read (SAM/BAM/CRAM), mapping (PAF/PSL/BLAST/GAF), graph (GFA) and
+profile-HMM inputs get `summary.json`, `tables/*.csv`, `report.md`, `report.html` and
+`run_manifest.json` with statistics specific to that model.
 
 Presets:
 

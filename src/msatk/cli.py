@@ -26,6 +26,11 @@ EPILOG = """examples:
   msatk logo alignment.fasta --start 1 --end 60 --out logo.pdf
   msatk encode alignment.fasta --encoding onehot --window 256 --stride 128 --out ml/
   msatk image alignment.fasta --kind rgb --scale 4 --out alignment.png
+  msatk inspect genomes.maf.gz
+  msatk profile reads.bam --out reads_qc/
+  msatk profile cds.fasta --type codon --genetic-code 2
+  msatk profile supermatrix.phy --partitions partitions.txt
+  msatk formats
   msatk demo
 """
 
@@ -93,6 +98,9 @@ def build_parser() -> argparse.ArgumentParser:
     profile.add_argument("--max-gap-site", type=float, default=0.5)
     profile.add_argument(
         "--force", action="store_true", help="Reuse/overwrite the output directory."
+    )
+    profile.add_argument(
+        "--reference", default=None, help="Reference FASTA for CRAM input (when required)."
     )
     profile.set_defaults(func=cmd_profile)
 
@@ -237,6 +245,21 @@ def build_parser() -> argparse.ArgumentParser:
     metrics = sub.add_parser("metrics", help="Print the metric dictionary (Markdown or JSON).")
     metrics.add_argument("--format", default="markdown", choices=["markdown", "json"])
     metrics.set_defaults(func=cmd_metrics)
+
+    inspect = sub.add_parser(
+        "inspect",
+        help="Report what an input contains, its data model and which analyses are valid.",
+    )
+    inspect.add_argument("input")
+    inspect.add_argument("--format", default="auto")
+    inspect.add_argument("--json", action="store_true", help="Print JSON.")
+    inspect.set_defaults(func=cmd_inspect)
+
+    formats = sub.add_parser(
+        "formats", help="Print the format/alignment-type compatibility matrix."
+    )
+    formats.add_argument("--format", default="markdown", choices=["markdown", "json"])
+    formats.set_defaults(func=cmd_formats)
     return parser
 
 
@@ -244,6 +267,14 @@ def _add_input(p: argparse.ArgumentParser) -> None:
     p.add_argument("input", help="Input alignment file.")
     p.add_argument("--type", default="auto", choices=MOLECULE_TYPES)
     p.add_argument("--format", default="auto", help="Input format; default auto.")
+    p.add_argument(
+        "--genetic-code", type=int, default=1,
+        help="NCBI translation table for codon/stop analysis (default 1, standard).",
+    )  # fmt: skip
+    p.add_argument(
+        "--partitions", default=None,
+        help="Partition file (RAxML/IQ-TREE style or NEXUS charsets) for per-partition stats.",
+    )  # fmt: skip
 
 
 def _add_out(p: argparse.ArgumentParser) -> None:
@@ -267,7 +298,9 @@ def _profiler(args: argparse.Namespace, cls: Any = None, **extra: Any) -> Any:
         "sequence_type": getattr(args, "type", "auto"),
         "fmt": getattr(args, "format", "auto"),
     }
-    for name in ("pairwise", "max_exact_sequences", "sample_pairs", "seed"):
+    for name in (
+        "pairwise", "max_exact_sequences", "sample_pairs", "seed", "genetic_code", "partitions"
+    ):  # fmt: skip
         if hasattr(args, name):
             kwargs[name] = getattr(args, name)
     kwargs.update(extra)
@@ -276,6 +309,22 @@ def _profiler(args: argparse.Namespace, cls: Any = None, **extra: Any) -> Any:
 
 def cmd_profile(args: argparse.Namespace) -> int:
     try:
+        from msatk.alignments import detect_input_format, get_format, load_alignment
+        from msatk.alignments.outputs import write_kind_outputs
+
+        fmt = args.format if args.format != "auto" else detect_input_format(args.input)
+        kind = get_format(fmt).kind if fmt in {f.name for f in _formats()} else "sequence"
+        if kind != "sequence":
+            obj = load_alignment(args.input, fmt, reference=args.reference)
+            res = write_kind_outputs(
+                obj, args.input, args.out, force=args.force,
+                command=" ".join(["msatk", *sys.argv[1:]]) if sys.argv else None,
+            )  # fmt: skip
+            print(f"\nMSATK {kind} profile complete\n")
+            for key, value in list(res["summary"].items())[:14]:
+                print(f"  {key}: {value}")
+            print(f"\nOutputs: {res['outdir']}")
+            return 0
         profiler = _profiler(args, validation_mode="strict" if args.strict else "permissive")
         result = profiler.write_outputs(
             outdir=args.out,
@@ -576,6 +625,61 @@ def cmd_metrics(args: argparse.Namespace) -> int:
 
 def _pct(value: Any) -> str:
     return "NA" if value is None else f"{float(value):.1%}"
+
+
+def _formats() -> Any:
+    from msatk.alignments import FORMATS
+
+    return FORMATS
+
+
+def cmd_inspect(args: argparse.Namespace) -> int:
+    from msatk.alignments import inspect_alignment
+
+    try:
+        info = inspect_alignment(args.input, args.format)
+    except (MSATKError, ValueError, OSError, KeyError) as exc:
+        _print_error(exc)
+        return 2
+    if args.json:
+        print(json.dumps(info, indent=2, default=str))
+        return 0
+    print(f"\n{info['path']}")
+    print(f"  format:        {info['format_label']} ({info['format']}, {info['support_level']})")
+    if info.get("compressed"):
+        print(f"  compressed:    {info['compressed']}")
+    print(f"  data model:    {info['data_model']} (kind: {info['kind']})")
+    for key in ("molecule_type", "scope", "method", "sequences", "columns"):
+        if key in info:
+            print(f"  {key + ':':<14} {info[key]}")
+    if info.get("annotations_found"):
+        print(f"  annotations:   {', '.join(info['annotations_found'])}")
+    for key, value in (info.get("contents") or {}).items():
+        if value is not None:
+            print(f"  {key + ':':<34} {value}")
+    print("\n  valid analyses:")
+    for item in info["valid_analyses"]:
+        print(f"    - {item}")
+    if info.get("specialized_analyses"):
+        print("\n  specialized analyses for this input:")
+        for name, why in info["specialized_analyses"].items():
+            print(f"    - {name}: {why}")
+    if info["not_computed_by_design"]:
+        print("\n  not computed by design:")
+        for item in info["not_computed_by_design"]:
+            print(f"    - {item}")
+    print(f"\n  status: {info['status']}\n")
+    return 0
+
+
+def cmd_formats(args: argparse.Namespace) -> int:
+    from msatk.alignments import capability_registry, compatibility_markdown
+
+    if args.format == "json":
+        print(json.dumps(capability_registry(), indent=2))
+    else:
+        print(compatibility_markdown())
+    return 0
 
 
 def _print_done(result: dict[str, Any]) -> None:

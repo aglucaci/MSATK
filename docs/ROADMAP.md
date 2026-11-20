@@ -30,9 +30,27 @@ Status key: ✅ done in 0.2 · 🟡 partial · ⬜ not started
 | Performance benchmarks and memory-efficient processing | 🟡 harness + results; streaming for >1e9 cells pending |
 | PyTorch/TensorFlow dataset adapters | ✅ (NumPy dataset + tensor adapters) |
 | Mutual information / coevolution, sequence weighting, effective sequence count | ⬜ |
-| BLOSUM-based protein similarity and conservation scores | ⬜ |
-| Alternative genetic codes; synonymous/non-synonymous variation | ⬜ |
-| Comparison against AMAS, AliStat, CIAlign, trimAl on shared metrics | ⬜ |
+| BLOSUM-based protein similarity and conservation scores | ✅ BLOSUM62 column scores, pairwise similarity |
+| Alternative genetic codes; synonymous/non-synonymous variation | 🟡 all NCBI codes; dN/dS-type variation pending |
+| Comparison against AMAS, AliStat, CIAlign, trimAl on shared metrics | 🟡 AMAS done (paper analysis); AliStat pending |
+
+## Alignment families (capability registry)
+
+| Family | Priority | Status |
+|---|---|---|
+| Nucleotide, protein and codon MSAs | P0 | ✅ |
+| Pairwise alignments (EMBOSS; PAF/PSL/BLAST hits) | P0 | ✅ beta |
+| Specialized MSA formats (A2M, A3M, MSF, MEGA, SELEX, MASE) | P0 | ✅ beta |
+| Gzip input for all text formats | P0 | ✅ |
+| Machine-readable capability registry, `msatk inspect`, `msatk formats` | P0 | ✅ |
+| Reference-based read alignments (SAM/BAM/CRAM QC) | P1 | 🟡 SAM tested; BAM needs pysam in CI; CRAM experimental |
+| Whole-genome block alignments (MAF, XMFA, AXT) | P1 | ✅ beta; chain and HAL planned |
+| RNA structure-aware alignments (SS_cons pairs, covariation) | P1 | ✅ beta |
+| Profile alignments (A2M/A3M states, HMMER3, HHM) | P1 | ✅ beta; profile scoring planned |
+| Multi-locus / partitioned alignments | P1 | ✅ beta |
+| Graph and pangenome alignments (GFA 1, rGFA, GAF) | P2 | ✅ beta; GFA 2, GBZ, ODGI planned |
+| Protein structure-aware alignments (PDB, mmCIF) | P2 | ⬜ recognised by `inspect` only |
+| BLAST XML/JSON, SNP/genotype and morphological matrices | P2 | ⬜ |
 
 ## P2 — post-publication
 

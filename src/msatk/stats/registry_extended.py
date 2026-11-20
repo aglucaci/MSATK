@@ -1,0 +1,455 @@
+"""Metric definitions for specialized analyses and non-sequence alignment kinds.
+
+Levels: ``pairwise_alignment``, ``substitution``, ``rna_structure``, ``rna_pair``,
+``profile_states``, ``profile_sequence``, ``partitions``, ``partition`` (sequence
+alignments); ``block``, ``block_row``, ``genome`` (block alignments); ``read``,
+``reference`` (read alignments); ``mapping``, ``mapping_interval`` (hit tables);
+``graph``, ``segment``, ``path`` (graphs); ``profile_model``, ``match_state``
+(profile HMMs).
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+NUC = ("dna", "rna", "codon")
+PROT = ("protein", "translated_cds")
+
+# (name, description, extra fields)
+_DEFS: dict[str, list[tuple[str, str, dict[str, Any]]]] = {
+    "alignment": [
+        (
+            "alignment_kind",
+            "Data model of the input (sequence, block, read, mapping, graph, profile_model).",
+            {},
+        ),
+        ("alignment_scope", "single, pairwise (N = 2) or multiple (N ≥ 3).", {}),
+        (
+            "alignment_method",
+            "Alignment method stated by the input format (global/local), else 'unknown'; never inferred.",
+            {},
+        ),
+        (
+            "annotations_found",
+            "Format annotations preserved from the input (e.g. GC:SS_cons, insert_states, partitions).",
+            {},
+        ),
+        (
+            "specialized",
+            "Nested summaries of the specialized analyses that apply to this input (see the levels below).",
+            {},
+        ),
+        (
+            "analysis_applicability",
+            "For each specialized analysis, whether it ran and why or why not.",
+            {},
+        ),
+    ],
+    "pairwise_alignment": [
+        (
+            "alignment_method",
+            "Method stated by the input (EMBOSS needle/stretcher = global, water/matcher = local).",
+            {},
+        ),
+        ("alignment_columns", "Alignment length in columns.", {}),
+        ("aligned_pairs", "Columns where neither sequence has a gap.", {}),
+        ("identical_pairs", "Aligned pairs of identical canonical residues.", {}),
+        ("mismatched_pairs", "Aligned pairs of different canonical residues.", {}),
+        (
+            "uncertain_pairs",
+            "Aligned pairs involving an ambiguity or missing-data symbol (not scored).",
+            {},
+        ),
+        (
+            "identity",
+            "Identical / (identical + mismatched) pairs.",
+            {"undefined": "No comparable pair."},
+        ),
+        ("identity_over_columns", "Identical pairs / alignment columns (EMBOSS 'Identity').", {}),
+        (
+            "similarity",
+            "(Identical + BLOSUM62-positive mismatches) / compared pairs.",
+            {"applies_to": PROT, "undefined": "Nucleotides."},
+        ),
+        ("length_1", "Residues in sequence 1.", {}),
+        ("length_2", "Residues in sequence 2.", {}),
+        ("coverage_1", "Fraction of sequence-1 residues aligned to a residue of sequence 2.", {}),
+        ("coverage_2", "Fraction of sequence-2 residues aligned to a residue of sequence 1.", {}),
+        ("gap_openings", "Internal gap runs in either sequence (terminal gaps excluded).", {}),
+        ("gap_extensions", "Internal gap positions beyond the first of each run.", {}),
+        ("internal_gap_positions", "Gap positions not touching either end.", {}),
+        ("terminal_gap_positions", "Gap positions in leading/trailing runs (end gaps).", {}),
+        ("score_recomputed", "Score under scoring_scheme (end gaps free, EMBOSS default).", {}),
+        ("scoring_scheme", "Scoring used for score_recomputed.", {}),
+        ("score_reported", "Score stated in the input file (EMBOSS), for comparison.", {}),
+        ("program_reported", "Aligner named in the input file.", {}),
+    ],
+    "substitution": [
+        (
+            "mean_column_blosum62",
+            "Mean over columns of the mean BLOSUM62 score of all residue pairs in the column.",
+            {"applies_to": PROT},
+        ),
+        (
+            "median_column_blosum62",
+            "Median of the column mean BLOSUM62 scores.",
+            {"applies_to": PROT},
+        ),
+        (
+            "columns_scored_blosum62",
+            "Columns with at least two canonical residues.",
+            {"applies_to": PROT},
+        ),
+    ],
+    "site_substitution": [
+        ("site_index", "1-based alignment column.", {}),
+        ("residue_pairs", "Unordered pairs of canonical residues in the column.", {}),
+        (
+            "mean_blosum62",
+            "Mean BLOSUM62 score over those pairs.",
+            {"formula": "(cᵀSc − Σ c_a S_aa) / (n(n−1))", "undefined": "Fewer than two residues."},
+        ),
+    ],
+    "rna_structure": [
+        (
+            "consensus_base_pairs",
+            "Base pairs in #=GC SS_cons (WUSS / dot-bracket, pseudoknot letters).",
+            {"applies_to": NUC},
+        ),
+        (
+            "consensus_paired_sites",
+            "Columns paired in the consensus structure.",
+            {"applies_to": NUC},
+        ),
+        (
+            "mean_canonical_pair_fraction",
+            "Mean over pairs of the fraction of complete sequences forming a Watson–Crick or GU pair.",
+            {"applies_to": NUC},
+        ),
+        (
+            "base_pairs_fully_canonical",
+            "Pairs canonical in every complete sequence.",
+            {"applies_to": NUC},
+        ),
+        (
+            "base_pairs_with_compensatory_change",
+            "Pairs where at least one sequence has a double (compensatory) substitution that preserves pairing.",
+            {"applies_to": NUC},
+        ),
+        (
+            "compensatory_pair_observations",
+            "Sequence × pair observations that are compensatory.",
+            {"applies_to": NUC},
+        ),
+        (
+            "consistent_pair_observations",
+            "Sequence × pair observations that are consistent (single change preserving pairing, e.g. GC→GU).",
+            {"applies_to": NUC},
+        ),
+    ],
+    "rna_pair": [
+        ("pair_i", "5' column of the base pair (1-based).", {}),
+        ("pair_j", "3' column of the base pair (1-based).", {}),
+        ("sequences_complete", "Sequences with a nucleotide at both columns.", {}),
+        ("watson_crick", "Sequences with AU, UA, GC or CG.", {}),
+        ("wobble", "Sequences with GU or UG.", {}),
+        ("noncanonical", "Sequences with any other nucleotide pair.", {}),
+        ("incomplete", "Sequences with a gap or ambiguity at either column.", {}),
+        (
+            "canonical_fraction",
+            "(watson_crick + wobble) / sequences_complete.",
+            {"undefined": "No complete sequence."},
+        ),
+        ("dominant_pair", "Most common canonical pair; reference for covariation.", {}),
+        (
+            "compensatory_sequences",
+            "Canonical pairs differing from dominant_pair at both positions.",
+            {},
+        ),
+        (
+            "consistent_sequences",
+            "Canonical pairs differing from dominant_pair at one position.",
+            {},
+        ),
+        ("covarying", "True when compensatory_sequences > 0.", {}),
+    ],
+    "profile_states": [
+        ("profile_source", "Where match/insert states came from (A2M/A3M or #=GC RF).", {}),
+        ("match_states", "Match-state columns.", {}),
+        ("insert_columns", "Insert columns (#=GC RF '.').", {}),
+        ("mean_match_state_coverage", "Mean fraction of match states occupied by a residue.", {}),
+        ("total_inserted_residues", "Residues in insert states, all sequences.", {}),
+        ("sequences_with_insertions", "Sequences with at least one inserted residue.", {}),
+        ("insert_positions_used", "Positions between match states where any sequence inserts.", {}),
+        (
+            "max_sequences_inserting_at_one_position",
+            "Largest number of sequences inserting at one position.",
+            {},
+        ),
+    ],
+    "profile_sequence": [
+        ("sequence_id", "Sequence identifier.", {}),
+        ("match_states", "Match-state columns.", {}),
+        ("match_states_occupied", "Match states with a residue in this sequence.", {}),
+        ("match_state_coverage", "match_states_occupied / match_states.", {}),
+        ("deletions", "Match states deleted ('-') in this sequence.", {}),
+        ("inserted_residues", "Lowercase (insert-state) residues in this sequence.", {}),
+        ("insertion_events", "Positions with at least one inserted residue.", {}),
+    ],
+    "partitions": [
+        ("partitions", "Declared partitions.", {}),
+        ("partition_sites_assigned", "Alignment columns in at least one partition.", {}),
+        ("partition_sites_unassigned", "Columns in no partition.", {}),
+        (
+            "partition_sites_overlapping",
+            "Column assignments beyond the first (overlapping partitions, e.g. genes and codon positions).",
+            {},
+        ),
+        ("partitions_failing_composition_test", "Partitions with composition χ² p < 0.05.", {}),
+    ],
+    "partition": [
+        ("partition", "Partition name.", {}),
+        ("datatype", "Data type from the partition file, if given.", {}),
+        ("sites_declared", "Columns listed for the partition.", {}),
+        ("sites_in_alignment", "Declared columns inside the alignment.", {}),
+        ("occupancy", "Residue fraction of the partition's cells.", {}),
+        ("gap_fraction", "Gap fraction of the partition's cells.", {}),
+        ("sequences_without_data", "Sequences with only gaps/missing data in the partition.", {}),
+        ("variable_sites", "Variable columns in the partition.", {}),
+        ("parsimony_informative_sites", "Parsimony-informative columns in the partition.", {}),
+        ("entropy_mean", "Mean column entropy in the partition.", {}),
+        ("gc_content", "GC fraction (nucleotides).", {"applies_to": NUC}),
+        (
+            "composition_chi2",
+            "Pearson χ² of the sequence × residue count table.",
+            {"undefined": "< 2 sequences or states with data."},
+        ),
+        ("composition_chi2_df", "Degrees of freedom (rows − 1)(columns − 1).", {}),
+        (
+            "composition_chi2_p",
+            "Upper-tail χ² p-value; small values indicate compositional heterogeneity.",
+            {},
+        ),
+    ],
+    "block": [
+        ("blocks", "Alignment blocks.", {}),
+        ("genomes", "Distinct genomes (MAF 'genome.chrom' prefix; XMFA sequence index/file).", {}),
+        ("reference_genome", "Genome of the first row of the first block.", {}),
+        ("total_block_columns", "Sum of block widths.", {}),
+        ("min_block_columns", "Narrowest block.", {}),
+        ("median_block_columns", "Median block width.", {}),
+        ("max_block_columns", "Widest block.", {}),
+        ("n50_block_columns", "Block-width N50.", {}),
+        ("mean_genomes_per_block", "Mean distinct genomes per block.", {}),
+        ("blocks_with_all_genomes", "Blocks containing every genome.", {}),
+        (
+            "reference_aligned_fraction",
+            "Reference bases covered by blocks / reference size.",
+            {"undefined": "Source sizes not in the format (XMFA, AXT)."},
+        ),
+        ("minus_strand_rows", "Block rows on the minus strand.", {}),
+        (
+            "collinearity_breakpoints",
+            "Adjacent blocks (reference order) whose chromosome, strand or order differs in another genome.",
+            {},
+        ),
+        (
+            "duplicated_bases",
+            "Aligned bases minus covered bases (bases aligned more than once).",
+            {},
+        ),
+    ],
+    "block_row": [
+        ("block", "Block number (1-based, file order).", {}),
+        ("columns", "Block width.", {}),
+        ("rows", "Rows in the block.", {}),
+        ("genomes", "Distinct genomes in the block.", {}),
+        ("reference_src", "Source sequence of the first row.", {}),
+        ("reference_start", "0-based forward-strand start of the first row.", {}),
+        ("reference_end", "Half-open end of the first row.", {}),
+        ("reference_strand", "Strand of the first row.", {}),
+        ("gap_fraction", "Gap fraction of the block.", {}),
+        ("variable_sites", "Variable columns in the block.", {}),
+        ("mean_consensus_identity", "Mean identity of rows to the block consensus.", {}),
+        ("score", "Block score from the file.", {}),
+    ],
+    "genome": [
+        ("genome", "Genome name.", {}),
+        ("is_reference", "True for the reference genome.", {}),
+        ("blocks_present", "Blocks containing this genome.", {}),
+        ("block_fraction", "blocks_present / blocks.", {}),
+        ("aligned_bases", "Sum of aligned interval lengths.", {}),
+        ("covered_bases", "Union of aligned intervals.", {}),
+        ("duplicated_bases", "aligned_bases − covered_bases.", {}),
+        ("genome_size", "Sum of source sizes (MAF).", {}),
+        ("aligned_fraction", "covered_bases / genome_size.", {}),
+        ("minus_strand_rows", "Rows on the minus strand.", {}),
+        (
+            "blocks_with_multiple_copies",
+            "Blocks containing this genome more than once (paralogy/duplication).",
+            {},
+        ),
+        ("collinearity_breakpoints", "Rearrangement breakpoints relative to the reference.", {}),
+    ],
+    "read": [
+        ("references", "Reference sequences in the header.", {}),
+        ("reference_bases", "Total reference length.", {}),
+        ("records", "Alignment records.", {}),
+        ("primary_reads", "Records that are neither secondary nor supplementary.", {}),
+        ("secondary_records", "Flag 0x100.", {}),
+        ("supplementary_records", "Flag 0x800.", {}),
+        ("unmapped_reads", "Primary records with flag 0x4.", {}),
+        ("mapping_rate", "Mapped primary reads / primary reads.", {}),
+        ("duplicate_reads", "Primary reads with flag 0x400.", {}),
+        ("qc_fail_reads", "Primary reads with flag 0x200.", {}),
+        ("paired_reads", "Primary reads with flag 0x1.", {}),
+        ("properly_paired_reads", "Primary reads with flag 0x2.", {}),
+        ("mean_mapq", "Mean MAPQ of mapped primary reads (255 excluded).", {}),
+        ("median_mapq", "Median MAPQ.", {}),
+        ("mapq_ge_30_fraction", "Fraction with MAPQ ≥ 30.", {}),
+        ("mapq_0_fraction", "Fraction with MAPQ 0 (multi-mapping).", {}),
+        ("aligned_bases", "CIGAR M/=/X bases of mapped primary reads.", {}),
+        ("inserted_bases", "CIGAR I bases.", {}),
+        ("deleted_bases", "CIGAR D bases.", {}),
+        ("indel_rate", "(I + D) / aligned_bases.", {}),
+        (
+            "mismatch_rate",
+            "Mismatches / aligned bases, from =/X CIGAR or NM − I − D.",
+            {"undefined": "NM missing and no =/X CIGAR."},
+        ),
+        ("soft_clipped_bases", "CIGAR S bases.", {}),
+        ("hard_clipped_bases", "CIGAR H bases.", {}),
+        ("clipped_read_fraction", "Mapped primary reads with any clipping.", {}),
+        ("spliced_reads", "Mapped reads with CIGAR N (spliced/split).", {}),
+        ("mean_read_length", "Mean read length.", {}),
+        ("n50_read_length", "Read-length N50.", {}),
+        ("mean_base_quality", "Mean Phred base quality.", {}),
+        ("median_insert_size", "Median |TLEN| of properly paired first mates.", {}),
+        (
+            "mean_depth",
+            "Length-weighted mean depth over references.",
+            {"undefined": "No @SQ lengths, or references too large."},
+        ),
+        ("breadth_1x", "Fraction of reference bases with depth ≥ 1.", {}),
+        ("breadth_10x", "Fraction of reference bases with depth ≥ 10.", {}),
+    ],
+    "reference": [
+        ("reference", "Reference name.", {}),
+        ("length", "Reference length (@SQ LN).", {}),
+        ("primary_mapped_reads", "Primary reads mapped to the reference.", {}),
+        ("mean_depth", "Mean depth.", {}),
+        ("median_depth", "Median depth.", {}),
+        ("breadth_1x", "Fraction of bases with depth ≥ 1.", {}),
+        ("breadth_10x", "Fraction of bases with depth ≥ 10.", {}),
+        ("breadth_30x", "Fraction of bases with depth ≥ 30.", {}),
+    ],
+    "mapping": [
+        ("records", "Hit/mapping records.", {}),
+        ("queries", "Distinct queries.", {}),
+        ("targets", "Distinct targets (sequences or graph paths).", {}),
+        ("multi_hit_queries", "Queries with more than one record.", {}),
+        ("mean_identity", "Mean per-record identity (format-specific definition).", {}),
+        ("median_identity", "Median per-record identity.", {}),
+        ("length_weighted_identity", "Identity weighted by alignment length.", {}),
+        ("total_aligned_length", "Sum of alignment lengths.", {}),
+        ("median_alignment_length", "Median alignment length.", {}),
+        ("minus_strand_fraction", "Records on the minus strand.", {}),
+        ("mean_mapq", "Mean MAPQ (PAF/GAF).", {}),
+        ("mapq_ge_30_fraction", "Fraction with MAPQ ≥ 30.", {}),
+        (
+            "mean_query_coverage",
+            "Mean over queries of covered bases / query length.",
+            {"undefined": "Query lengths not in the format."},
+        ),
+        (
+            "mean_target_coverage",
+            "Mean over targets of covered bases / target length.",
+            {"undefined": "Target lengths not in the format."},
+        ),
+        ("min_evalue", "Smallest e-value (BLAST).", {}),
+    ],
+    "mapping_interval": [
+        ("query", "Query name.", {}),
+        ("target", "Target name.", {}),
+        ("length", "Declared length.", {}),
+        ("hits", "Records involving this sequence.", {}),
+        ("covered_bases", "Union of aligned intervals.", {}),
+        ("coverage", "covered_bases / length.", {}),
+    ],
+    "graph": [
+        ("segments", "Segments (S lines).", {}),
+        ("total_segment_bases", "Sum of segment lengths.", {}),
+        ("mean_segment_length", "Mean segment length.", {}),
+        ("n50_segment_length", "Segment-length N50.", {}),
+        ("links", "Links (L lines).", {}),
+        ("connected_components", "Weakly connected components.", {}),
+        ("isolated_segments", "Segments without links.", {}),
+        ("tip_segments", "Segments with links on one side only.", {}),
+        (
+            "branching_segment_ends",
+            "Segment ends with more than one link (bubble/branch points).",
+            {},
+        ),
+        ("max_degree", "Largest number of links on one segment.", {}),
+        ("paths", "Paths (P) and walks (W).", {}),
+        ("mean_path_bases", "Mean path length in bases.", {}),
+        ("segments_on_paths", "Segments traversed by at least one path.", {}),
+        ("core_segments", "Segments on every path.", {}),
+        ("shell_segments", "Segments on more than one but not all paths.", {}),
+        ("private_segments", "Segments on exactly one path.", {}),
+        ("core_bases_fraction", "Bases in core segments / all segment bases.", {}),
+        ("reference_rank0_segments", "rGFA segments with SR:i:0 (reference backbone).", {}),
+    ],
+    "segment": [
+        ("segment", "Segment name.", {}),
+        ("length", "Segment length.", {}),
+        ("degree", "Links touching the segment.", {}),
+        ("left_links", "Links on the segment's left end.", {}),
+        ("right_links", "Links on the segment's right end.", {}),
+        ("paths", "Paths/walks traversing the segment.", {}),
+        ("rgfa_rank", "rGFA SR rank.", {}),
+    ],
+    "path": [
+        ("path", "Path or walk name (walk: sample#hap#seq:start-end).", {}),
+        ("segments", "Segment steps.", {}),
+        ("bases", "Path length in bases.", {}),
+        ("distinct_segments", "Distinct segments visited.", {}),
+    ],
+    "profile_model": [
+        ("model_name", "NAME line.", {}),
+        ("model_accession", "ACC line.", {}),
+        ("alphabet", "ALPH line.", {}),
+        ("model_length", "Match states (LENG).", {}),
+        ("training_sequences", "Sequences used to build the model (NSEQ).", {}),
+        ("effective_sequences", "Effective sequence number (EFFN / NEFF).", {}),
+        ("mean_match_entropy_bits", "Mean Shannon entropy of match-state emissions (HMMER3).", {}),
+        (
+            "mean_match_relative_entropy_bits",
+            "Mean relative entropy of match emissions vs the model COMPO composition.",
+            {},
+        ),
+    ],
+    "match_state": [
+        ("match_state", "Match-state index.", {}),
+        ("consensus", "Most probable residue.", {}),
+        ("max_emission", "Largest emission probability.", {}),
+        ("entropy_bits", "Shannon entropy of emissions.", {}),
+        ("relative_entropy_bits", "Relative entropy vs COMPO.", {}),
+    ],
+}
+
+# Kind-level summaries share these two bookkeeping fields.
+for _level in ("block", "read", "mapping", "graph", "profile_model"):
+    _DEFS[_level] = [
+        ("alignment_kind", "Data model of the input.", {}),
+        ("detected_format", "Detected input format.", {}),
+        *_DEFS[_level],
+    ]
+
+EXTENDED_LEVELS = tuple(k for k in _DEFS if k != "alignment")
+
+
+def extended_definitions() -> list[tuple[str, str, str, dict[str, Any]]]:
+    return [
+        (name, level, desc, extra) for level, rows in _DEFS.items() for name, desc, extra in rows
+    ]

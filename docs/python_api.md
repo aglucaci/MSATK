@@ -30,11 +30,32 @@ msa.report("report.html")                     # interactive, single file
 results = profile_alignment("alignment.fasta", outdir="alignment_msatk", preset="standard")
 ```
 
+Any alignment type:
+
+```python
+from msatk import load_alignment, inspect_alignment
+
+aln = load_alignment("reads.bam")        # ReadAlignment
+aln.kind, aln.summary()["mapping_rate"]
+aln.tables()["references"]               # per-reference depth and breadth
+
+inspect_alignment("family.sto")          # format, model, annotations, applicable analyses
+seq = load_alignment("family.sto")       # SequenceAlignment
+seq.summary()["specialized"]["rna_structure"]
+
+MSATK("cds.fasta", sequence_type="codon", genetic_code=2, partitions="parts.txt").specialized()
+```
+
 Lower-level modules:
 
 * `msatk.stats` — `compute_statistics`, `per_site_stats`, `per_sequence_stats`,
   `alignment_summary`, `compute_pairwise`, `diversity_summary`, `shannon_entropy`;
 * `msatk.stats.registry` — the metric dictionary;
+* `msatk.alignments` — data models, `load_alignment`, `inspect_alignment` and the
+  capability registry;
+* `msatk.stats.specialized` — pairwise, substitution, RNA-structure, profile-state and
+  partition analyses;
+* `msatk.core.genetic_code` — NCBI translation tables;
 * `msatk.core.alphabet` — character policies per molecule type;
 * `msatk.encoding` — tensors, images, transforms, export;
 * `msatk.viz` — alignment figures, logos, themes;

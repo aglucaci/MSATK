@@ -14,7 +14,8 @@ from typing import Any
 from msatk.core.detect import normalize_requested_type
 from msatk.core.interpretation import interpret_summary, recommended_next_steps
 from msatk.core.qc import QCFinding, QCThresholds, flagged_sequences, flagged_sites, qc_findings
-from msatk.io import read_alignment, write_csv, write_json, write_matrix_csv
+from msatk.io import write_csv, write_json, write_matrix_csv
+from msatk.io.readers import parse_partition_file, read_sequence_alignment
 from msatk.stats import StatisticsBundle, compute_statistics, gap_block_rows
 from msatk.stats.registry import metric_dictionary
 from msatk.version import __version__
@@ -55,10 +56,22 @@ class MSATK:
         max_exact_sequences: int = 1000,
         sample_pairs: int = 20000,
         seed: int = 0,
+        genetic_code: int = 1,
+        partitions: str | Path | None = None,
     ) -> None:
         self.path = Path(path)
+        self.genetic_code = int(genetic_code)
+        self.partitions_file = Path(partitions) if partitions else None
         self.validation_mode = validation_mode
-        self.alignment = read_alignment(self.path, fmt=fmt, validation_mode=validation_mode)
+        self.alignment, self.annotations = read_sequence_alignment(
+            self.path, fmt=fmt, validation_mode=validation_mode
+        )
+        self.partitions = (
+            parse_partition_file(self.partitions_file, self.alignment.length)
+            if self.partitions_file
+            else []
+        )
+        self._special: tuple[Any, ...] | None = None
         self.sequence_type = normalize_requested_type(sequence_type, self.alignment)
         self.pairwise_method = pairwise
         self.max_exact_sequences = max_exact_sequences
@@ -76,6 +89,7 @@ class MSATK:
                 max_exact_sequences=self.max_exact_sequences,
                 sample_pairs=self.sample_pairs,
                 seed=self.seed,
+                genetic_code=self.genetic_code,
             )
         return self._bundle
 
@@ -116,6 +130,7 @@ class MSATK:
             bundle.sites,
             summary=bundle.summary,
             thresholds=thresholds,
+            genetic_code=self.genetic_code,
         )
 
     # Backward-compatible names -------------------------------------------------
@@ -480,7 +495,32 @@ class MSATK:
             "python_version": sys.version.split()[0],
             "platform": platform.platform(),
             "coordinate_convention": "1-based, inclusive",
+            "alignment_kind": "sequence",
+            "alignment_scope": "single"
+            if self.alignment.n_sequences == 1
+            else "pairwise"
+            if self.alignment.n_sequences == 2
+            else "multiple",
+            "alignment_method": self.annotations.method,
+            "annotations_found": self.annotations.present()
+            + (["partitions (file)"] if self.partitions else []),
+            "specialized": self.specialized()[0],
+            "analysis_applicability": self.specialized()[2],
         }
+
+    def specialized(
+        self,
+    ) -> tuple[dict[str, dict[str, Any]], dict[str, list[dict[str, Any]]], dict[str, str]]:
+        """Analyses that apply only to some inputs (pairwise, protein substitution, RNA
+        structure, profile states, partitions): ``(summaries, tables, applicability)``."""
+
+        if self._special is None:
+            from msatk.stats.specialized import specialized_analyses
+
+            self._special = specialized_analyses(
+                self.stats(), self.sequence_type, self.annotations, self.partitions
+            )
+        return self._special  # type: ignore[return-value]
 
     def _force_exact_pairwise(self) -> None:
         result = self.stats().pairwise
@@ -541,6 +581,8 @@ class MSATK:
 
     def _write_mode_tables(self, tables_dir: Path) -> None:
         site_rows = self.stats().sites
+        for name, rows in self.specialized()[1].items():
+            write_csv(tables_dir / f"{name}.csv", rows)
         if self.sequence_type == "codon":
             from msatk.codon.analysis import (
                 amino_acid_from_codons,
@@ -551,14 +593,19 @@ class MSATK:
                 stop_codon_report,
             )
 
-            write_csv(tables_dir / "codon_usage.csv", codon_usage(self.alignment))
-            write_csv(tables_dir / "rscu.csv", rscu(self.alignment))
+            write_csv(
+                tables_dir / "codon_usage.csv", codon_usage(self.alignment, self.genetic_code)
+            )
+            write_csv(tables_dir / "rscu.csv", rscu(self.alignment, self.genetic_code))
             write_csv(tables_dir / "codon_position_gc.csv", codon_position_gc(self.alignment))
             write_csv(tables_dir / "codon_position_entropy.csv", codon_position_entropy(site_rows))
-            write_csv(tables_dir / "stop_codon_report.csv", stop_codon_report(self.alignment))
+            write_csv(
+                tables_dir / "stop_codon_report.csv",
+                stop_codon_report(self.alignment, self.genetic_code),
+            )
             write_csv(
                 tables_dir / "translated_amino_acid_summary.csv",
-                amino_acid_from_codons(self.alignment),
+                amino_acid_from_codons(self.alignment, self.genetic_code),
             )
         elif self.sequence_type in {"protein", "translated_cds"}:
             from msatk.protein.analysis import (

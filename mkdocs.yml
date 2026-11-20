@@ -11,6 +11,8 @@ nav:
   - CLI: CLI.md
   - Python API: python_api.md
   - Outputs: outputs.md
+  - Alignment Types: alignment_types.md
+  - Format Compatibility: compatibility.md
   - Statistical Conventions: statistics.md
   - Metric Dictionary: metrics.md
   - Visualization: visualization.md

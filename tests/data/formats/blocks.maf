@@ -1,0 +1,16 @@
+##maf version=1 scoring=toy
+# three genomes, three blocks; block 3 is inverted in mm10 and absent in canFam
+
+a score=100.0
+s hg38.chr1    100 10 + 1000 ACGTACGTAC
+s mm10.chr2    500 10 + 2000 ACGTACGAAC
+s canFam.chr5   50 10 + 800  ACGTTCGTAC
+
+a score=80.0
+s hg38.chr1    110 8 + 1000 GGGCCCAA
+s mm10.chr2    510 8 + 2000 GGGCCC-A
+s canFam.chr5   60 7 + 800  GG-CCCAA
+
+a score=50.0
+s hg38.chr1    200 6 + 1000 TTTAAA
+s mm10.chr2   1400 6 - 2000 TTTAAT

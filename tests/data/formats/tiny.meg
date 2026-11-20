@@ -1,0 +1,7 @@
+#mega
+!Title tiny;
+!Format DataType=DNA indel=- identical=.;
+
+#seq1 ATGCTAGCTA
+#seq2 .......T..
+#seq3 ...-......

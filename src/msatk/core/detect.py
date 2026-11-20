@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from msatk.constants import DNA_ALPHABET, GAP_CHARS, PROTEIN_ALPHABET, RNA_ALPHABET, STOP_CODONS
+from msatk.constants import DNA_ALPHABET, GAP_CHARS, PROTEIN_ALPHABET, RNA_ALPHABET
+from msatk.core.genetic_code import genetic_code
 from msatk.models import Alignment
 
 
@@ -49,12 +50,14 @@ def normalize_requested_type(sequence_type: str, alignment: Alignment) -> str:
     return aliases.get(normalized, normalized)
 
 
-def alignment_detection_summary(alignment: Alignment, molecule_type: str) -> dict[str, object]:
+def alignment_detection_summary(
+    alignment: Alignment, molecule_type: str, code: int = 1
+) -> dict[str, object]:
     """Infer user-facing alignment properties for reports and JSON outputs."""
 
     length_divisible_by_three = alignment.length % 3 == 0
     nucleotide_like = molecule_type in {"dna", "rna", "codon"}
-    stop_rows = _stop_codon_hits(alignment) if nucleotide_like else []
+    stop_rows = _stop_codon_hits(alignment, code) if nucleotide_like else []
     frame_rows = _frame_warnings(alignment) if nucleotide_like else []
     appears_codon_aware = nucleotide_like and length_divisible_by_three and not frame_rows
     return {
@@ -69,6 +72,7 @@ def alignment_detection_summary(alignment: Alignment, molecule_type: str) -> dic
         "frameshift_warnings_exist": bool(frame_rows),
         "frameshift_warning_count": len(frame_rows),
         "translated_cds_mode": molecule_type == "translated_cds",
+        "genetic_code": code if nucleotide_like else None,
     }
 
 
@@ -82,16 +86,16 @@ def _codon_matrix(alignment: Alignment) -> tuple[np.ndarray, np.ndarray]:
     return chars[:, : (alignment.length // 3) * 3], lengths
 
 
-def _stop_codon_hits(alignment: Alignment) -> list[dict[str, object]]:
+def _stop_codon_hits(alignment: Alignment, code: int = 1) -> list[dict[str, object]]:
     hits: list[dict[str, object]] = []
     if alignment.length < 3:
         return hits
     chars, lengths = _codon_matrix(alignment)
     codons = chars.reshape(chars.shape[0], -1, 3)
     is_stop = np.zeros(codons.shape[:2], dtype=bool)
-    for stop in STOP_CODONS:
-        code = np.frombuffer(stop.encode(), dtype=np.uint8)
-        is_stop |= (codons == code).all(axis=2)
+    for stop in sorted(genetic_code(code).stops):
+        pattern = np.frombuffer(stop.encode(), dtype=np.uint8)
+        is_stop |= (codons == pattern).all(axis=2)
     for row, col in zip(*np.nonzero(is_stop)):
         n_codons = int(lengths[row]) // 3
         if col >= n_codons:

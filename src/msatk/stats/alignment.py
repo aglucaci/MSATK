@@ -93,6 +93,7 @@ def alignment_summary_encoded(
     site_rows: list[dict[str, Any]],
     seq_rows: list[dict[str, Any]],
     pairwise: PairwiseResult | None,
+    genetic_code: int = 1,
 ) -> dict[str, Any]:
     alignment = enc.alignment
     molecule_type = enc.policy.molecule_type
@@ -121,7 +122,7 @@ def alignment_summary_encoded(
         "padded_cells": alignment.padded_cells,
         "detected_format": alignment.fmt,
         "molecule_type": molecule_type,
-        **alignment_detection_summary(alignment, molecule_type),
+        **alignment_detection_summary(alignment, molecule_type, genetic_code),
         "duplicate_id_count": sum(1 for c in id_counts.values() if c > 1),
         "unique_sequence_count": len(
             {row["duplicate_of"] or row["sequence_id"] for row in seq_rows}
@@ -200,6 +201,7 @@ def compute_statistics(
     max_exact_sequences: int = 1000,
     sample_pairs: int = 20000,
     seed: int = 0,
+    genetic_code: int = 1,
 ) -> StatisticsBundle:
     enc = encode_alignment(alignment, molecule_type)
     pw = compute_pairwise(
@@ -211,5 +213,5 @@ def compute_statistics(
     )
     sites = per_site_stats_encoded(enc)
     sequences = per_sequence_stats_encoded(enc, pw)
-    summary = alignment_summary_encoded(enc, sites, sequences, pw)
+    summary = alignment_summary_encoded(enc, sites, sequences, pw, genetic_code)
     return StatisticsBundle(enc, summary, sites, sequences, pw, composition_rows(enc))

@@ -91,6 +91,14 @@ METRICS: tuple[MetricDefinition, ...] = (
     ),
     _m("frameshift_warning_count", _A, "Number of frame warnings.", applies_to=NUC),
     _m("translated_cds_mode", _A, "True when analysed as translated CDS."),
+    _m(
+        "genetic_code",
+        _A,
+        "NCBI translation table used for stop-codon and frame checks.",
+        value_range="NCBI table id (1-33)",
+        applies_to=("dna", "rna", "codon"),
+        undefined="Protein or non-nucleotide alignment.",
+    ),
     _m("duplicate_id_count", _A, "Number of sequence identifiers that occur more than once."),
     _m(
         "unique_sequence_count",
@@ -467,6 +475,17 @@ METRICS: tuple[MetricDefinition, ...] = (
     _m("p_distance", _P, "1 - identity (uncorrected).", undefined="No comparable sites."),
 )
 
+
+def _extended() -> tuple[MetricDefinition, ...]:
+    from msatk.stats.registry_extended import extended_definitions
+
+    return tuple(
+        _m(name, level, desc, **extra) for name, level, desc, extra in extended_definitions()
+    )
+
+
+METRICS = METRICS + _extended()
+
 _INDEX = {(m.level, m.name): m for m in METRICS}
 
 
@@ -495,9 +514,34 @@ def metrics_markdown() -> str:
         "Undefined values are written as empty CSV cells / JSON `null`, never as zero.",
         "",
     ]
-    for level in (_A, _Q, _S, _P):
+    from msatk.stats.registry_extended import EXTENDED_LEVELS
+
+    titles = {
+        "pairwise_alignment": "Pairwise alignment (N = 2)",
+        "substitution": "Protein substitution scores (summary)",
+        "site_substitution": "Protein substitution scores (per site)",
+        "rna_structure": "RNA secondary structure (summary)",
+        "rna_pair": "RNA base pairs (per pair)",
+        "profile_states": "Profile match/insert states (summary)",
+        "profile_sequence": "Profile match/insert states (per sequence)",
+        "partitions": "Partitions (summary)",
+        "partition": "Partitions (per partition)",
+        "block": "Block alignments (summary)",
+        "block_row": "Block alignments (per block)",
+        "genome": "Block alignments (per genome)",
+        "read": "Read alignments (summary)",
+        "reference": "Read alignments (per reference)",
+        "mapping": "Mappings and hits (summary)",
+        "mapping_interval": "Mappings and hits (per query / target)",
+        "graph": "Sequence graphs (summary)",
+        "segment": "Sequence graphs (per segment)",
+        "path": "Sequence graphs (per path)",
+        "profile_model": "Profile HMMs (summary)",
+        "match_state": "Profile HMMs (per match state)",
+    }
+    for level in (_A, _Q, _S, _P, *EXTENDED_LEVELS):
         lines += [
-            f"## {level.title()}-level",
+            f"## {titles.get(level, level.title() + '-level')}",
             "",
             "| Field | Definition | Formula | Range | Undefined when | Applies to |",
             "|---|---|---|---|---|---|",

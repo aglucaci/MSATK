@@ -26,16 +26,16 @@ class CodonProfiler(MSATK):
         super().__init__(path, sequence_type=sequence_type, fmt=fmt, **kwargs)
 
     def codon_usage(self) -> list[dict[str, Any]]:
-        return codon_usage(self.alignment)
+        return codon_usage(self.alignment, self.genetic_code)
 
     def rscu(self) -> list[dict[str, Any]]:
-        return rscu(self.alignment)
+        return rscu(self.alignment, self.genetic_code)
 
     def amino_acid_from_codons(self) -> list[dict[str, Any]]:
-        return amino_acid_from_codons(self.alignment)
+        return amino_acid_from_codons(self.alignment, self.genetic_code)
 
     def stop_codon_report(self) -> list[dict[str, Any]]:
-        return stop_codon_report(self.alignment)
+        return stop_codon_report(self.alignment, self.genetic_code)
 
     def codon_position_gc(self) -> list[dict[str, Any]]:
         return codon_position_gc(self.alignment)

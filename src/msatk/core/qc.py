@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from msatk.constants import STOP_CODONS
+from msatk.core.genetic_code import genetic_code as _genetic_code
 from msatk.models import Alignment
 
 SEVERITY_ORDER = {"error": 0, "warning": 1, "info": 2, "ok": 3}
@@ -59,9 +59,12 @@ def qc_findings(
     per_site: list[dict[str, Any]],
     summary: dict[str, Any] | None = None,
     thresholds: QCThresholds | None = None,
+    genetic_code: int | None = None,
 ) -> list[QCFinding]:
     t = thresholds or QCThresholds()
     summary = summary or {}
+    code = genetic_code or int(summary.get("genetic_code") or 1)
+    stops = _genetic_code(code).stops
     out: list[QCFinding] = []
 
     if not alignment.is_rectangular:
@@ -221,19 +224,19 @@ def qc_findings(
             )
         )
     if molecule_type == "codon":
-        out.extend(_codon_findings(alignment))
+        out.extend(_codon_findings(alignment, stops))
     if molecule_type in {"protein", "translated_cds"}:
-        stops = [r.id for r in alignment.records if "*" in r.sequence.rstrip("-.*")]
-        if stops:
+        stop_rows = [r.id for r in alignment.records if "*" in r.sequence.rstrip("-.*")]
+        if stop_rows:
             out.append(
                 QCFinding(
                     "INTERNAL_STOPS_PROTEIN",
                     "warning",
                     "sequence",
-                    f"{len(stops)} protein sequence(s) contain internal stop symbols ('*').",
-                    len(stops),
+                    f"{len(stop_rows)} protein sequence(s) contain internal stop symbols ('*').",
+                    len(stop_rows),
                     "Check translation frame and genetic code.",
-                    stops,
+                    stop_rows,
                 )
             )
     if alignment.n_sequences == 1:
@@ -259,7 +262,7 @@ def qc_findings(
     return out
 
 
-def _codon_findings(alignment: Alignment) -> list[QCFinding]:
+def _codon_findings(alignment: Alignment, stops: frozenset[str]) -> list[QCFinding]:
     out: list[QCFinding] = []
     if alignment.length % 3 != 0:
         out.append(
@@ -277,7 +280,7 @@ def _codon_findings(alignment: Alignment) -> list[QCFinding]:
     for record in alignment.records:
         seq = record.sequence.upper().replace("U", "T")
         codons = [seq[i : i + 3] for i in range(0, len(seq) - 2, 3)]
-        internal = [c for c in codons[:-1] if c in STOP_CODONS]
+        internal = [c for c in codons[:-1] if c in stops]
         if internal:
             stop_ids.append(record.id)
             out.append(

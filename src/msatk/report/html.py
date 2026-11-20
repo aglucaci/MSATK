@@ -167,7 +167,47 @@ def render_interactive_report(
         .replace("{{INTERPRETATION}}", escape(interpretation_text))
         .replace("{{STEPS}}", steps)
         .replace("{{LINKS}}", links)
+        .replace("{{SPECIALIZED}}", _specialized_section(summary))
         .replace("{{DATA}}", _json_for_script(data))
+    )
+
+
+_SPECIAL_TITLES = {
+    "pairwise_alignment": "Pairwise alignment",
+    "substitution": "Protein substitution scores (BLOSUM62)",
+    "rna_structure": "RNA secondary structure",
+    "profile_states": "Profile match/insert states",
+    "partitions": "Partitions",
+}
+
+
+def _specialized_section(summary: dict[str, Any]) -> str:
+    """Static section listing which specialized analyses ran, why, and their results."""
+
+    special = summary.get("specialized") or {}
+    why = summary.get("analysis_applicability") or {}
+    if not why:
+        return ""
+    status = "".join(
+        f"<tr><td>{escape(_SPECIAL_TITLES.get(k, k))}</td><td>{escape(str(v))}</td></tr>"
+        for k, v in why.items()
+    )
+    blocks = []
+    for name, values in special.items():
+        rows = "".join(
+            f"<tr><td><code>{escape(k)}</code></td><td>{escape(format_value(v, k))}</td></tr>"
+            for k, v in values.items()
+        )
+        blocks.append(
+            f"<h3>{escape(_SPECIAL_TITLES.get(name, name))}</h3><table><tbody>{rows}</tbody></table>"
+        )
+    return (
+        '<section id="specialized"><h2>Specialized analyses</h2>'
+        '<p class="muted">Analyses that apply only to some inputs run only when valid; '
+        "tables are in <code>tables/</code>.</p>"
+        f"<table><thead><tr><th>Analysis</th><th>Status</th></tr></thead><tbody>{status}</tbody></table>"
+        + "".join(blocks)
+        + "</section>"
     )
 
 
@@ -292,7 +332,7 @@ canvas.heat{border:1px solid var(--line);border-radius:6px;max-width:100%}
 <div style="margin-left:auto"><button id="themeBtn" title="Toggle light/dark">◐</button></div></div></header>
 <nav class="tabs"><div class="wrap">
 <a href="#overview">Overview</a><a href="#qc">QC</a><a href="#viewer">Alignment</a><a href="#sites">Sites</a>
-<a href="#sequences">Sequences</a><a href="#pairwise">Pairwise</a><a href="#figures">Figures</a><a href="#repro">Reproducibility</a>
+<a href="#sequences">Sequences</a><a href="#pairwise">Pairwise</a><a href="#specialized">Specialized</a><a href="#figures">Figures</a><a href="#repro">Reproducibility</a>
 </div></nav>
 <main class="wrap">
 <section id="overview"><h2>Overview</h2>
@@ -302,6 +342,7 @@ canvas.heat{border:1px solid var(--line);border-radius:6px;max-width:100%}
 <h3>All summary statistics</h3><div id="summaryTable"></div>
 </section>
 <section id="qc"><h2>Quality assessment</h2><p class="muted">Findings are ranked by severity. Expand a finding to see affected sequences or sites.</p><div id="findings"></div></section>
+{{SPECIALIZED}}
 <section id="viewer"><h2>Alignment viewer</h2>
 <div id="viewerNote" class="muted"></div>
 <div class="controls">

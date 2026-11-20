@@ -34,6 +34,20 @@ alignment_msatk/
 └── ml/                      # only with --encodings
 ```
 
+Specialized analyses add tables when they apply (see
+[Alignment types](alignment_types.md)): `site_substitution_scores.csv` (proteins),
+`rna_base_pairs.csv` (Stockholm `SS_cons`), `profile_states.csv` (A2M/A3M) and
+`partitions.csv` (charsets or `--partitions`). Their summaries are nested under
+`summary.json → specialized`, and `analysis_applicability` records why each analysis ran or
+was skipped.
+
+Block, read, mapping, graph and profile-HMM inputs produce a smaller directory:
+`summary.json` (statistics and provenance), `tables/*.csv` (for example `blocks.csv` and
+`genomes.csv`; `references.csv` and `mapq_histogram.csv`; `queries.csv` and `targets.csv`;
+`segments.csv` and `paths.csv`; `match_states.csv`), `metric_dictionary.json`,
+`report.md`, `report.html` and `run_manifest.json`. Intervals in these tables are 0-based
+and half-open.
+
 Codon alignments add codon usage, RSCU, codon-position GC and entropy, translated
 amino-acid summaries and stop-codon reports. Protein alignments add amino-acid,
 residue-class and hydrophobicity summaries.

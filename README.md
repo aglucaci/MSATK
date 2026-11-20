@@ -179,39 +179,23 @@ $env:PYTHONPATH="src"; python -m msatk.cli demo --out msatk_demo --force
 
 ## Supported Input Types
 
-Core formats:
+MSATK distinguishes the alignment **type** (data model), the **method** and the **file
+format**, and dispatches each input to analyses that are valid for it:
 
-- FASTA
-- aligned FASTA
-- PHYLIP
-- relaxed PHYLIP
-- NEXUS
-- CLUSTAL
-- Stockholm
-- A3M
-- MAF
-- SAM
-- BAM/CRAM-derived alignment summaries
+| Data model | Formats | Analyses |
+|---|---|---|
+| Sequence alignment (pairwise or multiple) | FASTA, PHYLIP, CLUSTAL, NEXUS, Stockholm, A2M, A3M, MSF, MEGA, SELEX, MASE, EMBOSS | Full statistics, QC, figures, report, ML encodings; pairwise, BLOSUM62, RNA structure, profile-state and partition analyses when applicable |
+| Whole-genome blocks | MAF, XMFA, AXT | Block sizes, per-genome coverage, strand and collinearity breakpoints |
+| Mapped reads | SAM, BAM, CRAM (pysam) | Mapping rate, MAPQ, CIGAR, quality, depth and breadth |
+| Mappings and hits | PAF, PSL, BLAST tabular, GAF | Identity, length, MAPQ/e-value, query and target coverage |
+| Sequence graphs | GFA 1, rGFA | Segments, links, components, paths, core/shell/private segments |
+| Profile HMMs | HMMER3, HHM | Model metadata, match-state emission entropy |
 
-Sequence types:
-
-- nucleotide alignments
-- amino-acid alignments
-- codon alignments
-- translated CDS alignments
-- mixed or auto-detected mode
-
-MSATK automatically infers:
-
-- file format
-- molecule type: DNA, RNA, protein, codon, translated CDS, or mixed
-- alignment length
-- whether sequence lengths are consistent
-- whether stop codons exist
-- whether frameshift warnings are present
-- whether the alignment appears codon-aware
-
-These fields are written to `summary.json`, `tables/alignment_summary.csv`, and the HTML report.
+Gzip-compressed input is accepted. All NCBI genetic codes are available with
+`--genetic-code`. Run `msatk inspect file` to see what a file contains and what can be
+computed, and `msatk formats` for the full matrix with support levels
+([docs/compatibility.md](docs/compatibility.md), generated from the capability registry).
+PDB/mmCIF, GBZ, ODGI, HAL and chain files are recognised but not yet supported.
 
 ## Install Extras
 

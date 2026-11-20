@@ -28,6 +28,7 @@ Undefined values are written as empty CSV cells / JSON `null`, never as zero.
 | `frameshift_warnings_exist` | Any frame warning (L or ungapped length not divisible by 3, or partially gapped codons). |  |  |  | dna, rna, codon |
 | `frameshift_warning_count` | Number of frame warnings. |  |  |  | dna, rna, codon |
 | `translated_cds_mode` | True when analysed as translated CDS. |  |  |  | all |
+| `genetic_code` | NCBI translation table used for stop-codon and frame checks. |  | NCBI table id (1-33) | Protein or non-nucleotide alignment. | dna, rna, codon |
 | `duplicate_id_count` | Number of sequence identifiers that occur more than once. |  |  |  | all |
 | `unique_sequence_count` | Number of distinct aligned sequences (exact string identity after case normalisation). |  |  |  | all |
 | `duplicate_sequence_count` | Sequences identical to an earlier sequence. |  |  |  | all |
@@ -90,6 +91,12 @@ Undefined values are written as empty CSV cells / JSON `null`, never as zero.
 | `coordinate_convention` | Coordinate convention of site indices (1-based, inclusive). |  |  |  | all |
 | `interpretation` | Plain-language interpretation of the profile. |  |  |  | all |
 | `recommended_next_steps` | Suggested follow-up actions. |  |  |  | all |
+| `alignment_kind` | Data model of the input (sequence, block, read, mapping, graph, profile_model). |  |  |  | all |
+| `alignment_scope` | single, pairwise (N = 2) or multiple (N ≥ 3). |  |  |  | all |
+| `alignment_method` | Alignment method stated by the input format (global/local), else 'unknown'; never inferred. |  |  |  | all |
+| `annotations_found` | Format annotations preserved from the input (e.g. GC:SS_cons, insert_states, partitions). |  |  |  | all |
+| `specialized` | Nested summaries of the specialized analyses that apply to this input (see the levels below). |  |  |  | all |
+| `analysis_applicability` | For each specialized analysis, whether it ran and why or why not. |  |  |  | all |
 
 ## Sequence-level
 
@@ -169,4 +176,340 @@ Undefined values are written as empty CSV cells / JSON `null`, never as zero.
 | `mismatches` | Comparable columns with different residues. |  |  |  | all |
 | `identity` | (comparable_sites - mismatches) / comparable_sites. |  |  | No comparable sites. | all |
 | `p_distance` | 1 - identity (uncorrected). |  |  | No comparable sites. | all |
+
+## Pairwise alignment (N = 2)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `alignment_method` | Method stated by the input (EMBOSS needle/stretcher = global, water/matcher = local). |  |  |  | all |
+| `alignment_columns` | Alignment length in columns. |  |  |  | all |
+| `aligned_pairs` | Columns where neither sequence has a gap. |  |  |  | all |
+| `identical_pairs` | Aligned pairs of identical canonical residues. |  |  |  | all |
+| `mismatched_pairs` | Aligned pairs of different canonical residues. |  |  |  | all |
+| `uncertain_pairs` | Aligned pairs involving an ambiguity or missing-data symbol (not scored). |  |  |  | all |
+| `identity` | Identical / (identical + mismatched) pairs. |  |  | No comparable pair. | all |
+| `identity_over_columns` | Identical pairs / alignment columns (EMBOSS 'Identity'). |  |  |  | all |
+| `similarity` | (Identical + BLOSUM62-positive mismatches) / compared pairs. |  |  | Nucleotides. | protein, translated_cds |
+| `length_1` | Residues in sequence 1. |  |  |  | all |
+| `length_2` | Residues in sequence 2. |  |  |  | all |
+| `coverage_1` | Fraction of sequence-1 residues aligned to a residue of sequence 2. |  |  |  | all |
+| `coverage_2` | Fraction of sequence-2 residues aligned to a residue of sequence 1. |  |  |  | all |
+| `gap_openings` | Internal gap runs in either sequence (terminal gaps excluded). |  |  |  | all |
+| `gap_extensions` | Internal gap positions beyond the first of each run. |  |  |  | all |
+| `internal_gap_positions` | Gap positions not touching either end. |  |  |  | all |
+| `terminal_gap_positions` | Gap positions in leading/trailing runs (end gaps). |  |  |  | all |
+| `score_recomputed` | Score under scoring_scheme (end gaps free, EMBOSS default). |  |  |  | all |
+| `scoring_scheme` | Scoring used for score_recomputed. |  |  |  | all |
+| `score_reported` | Score stated in the input file (EMBOSS), for comparison. |  |  |  | all |
+| `program_reported` | Aligner named in the input file. |  |  |  | all |
+
+## Protein substitution scores (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `mean_column_blosum62` | Mean over columns of the mean BLOSUM62 score of all residue pairs in the column. |  |  |  | protein, translated_cds |
+| `median_column_blosum62` | Median of the column mean BLOSUM62 scores. |  |  |  | protein, translated_cds |
+| `columns_scored_blosum62` | Columns with at least two canonical residues. |  |  |  | protein, translated_cds |
+
+## Protein substitution scores (per site)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `site_index` | 1-based alignment column. |  |  |  | all |
+| `residue_pairs` | Unordered pairs of canonical residues in the column. |  |  |  | all |
+| `mean_blosum62` | Mean BLOSUM62 score over those pairs. | `(cᵀSc − Σ c_a S_aa) / (n(n−1))` |  | Fewer than two residues. | all |
+
+## RNA secondary structure (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `consensus_base_pairs` | Base pairs in #=GC SS_cons (WUSS / dot-bracket, pseudoknot letters). |  |  |  | dna, rna, codon |
+| `consensus_paired_sites` | Columns paired in the consensus structure. |  |  |  | dna, rna, codon |
+| `mean_canonical_pair_fraction` | Mean over pairs of the fraction of complete sequences forming a Watson–Crick or GU pair. |  |  |  | dna, rna, codon |
+| `base_pairs_fully_canonical` | Pairs canonical in every complete sequence. |  |  |  | dna, rna, codon |
+| `base_pairs_with_compensatory_change` | Pairs where at least one sequence has a double (compensatory) substitution that preserves pairing. |  |  |  | dna, rna, codon |
+| `compensatory_pair_observations` | Sequence × pair observations that are compensatory. |  |  |  | dna, rna, codon |
+| `consistent_pair_observations` | Sequence × pair observations that are consistent (single change preserving pairing, e.g. GC→GU). |  |  |  | dna, rna, codon |
+
+## RNA base pairs (per pair)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `pair_i` | 5' column of the base pair (1-based). |  |  |  | all |
+| `pair_j` | 3' column of the base pair (1-based). |  |  |  | all |
+| `sequences_complete` | Sequences with a nucleotide at both columns. |  |  |  | all |
+| `watson_crick` | Sequences with AU, UA, GC or CG. |  |  |  | all |
+| `wobble` | Sequences with GU or UG. |  |  |  | all |
+| `noncanonical` | Sequences with any other nucleotide pair. |  |  |  | all |
+| `incomplete` | Sequences with a gap or ambiguity at either column. |  |  |  | all |
+| `canonical_fraction` | (watson_crick + wobble) / sequences_complete. |  |  | No complete sequence. | all |
+| `dominant_pair` | Most common canonical pair; reference for covariation. |  |  |  | all |
+| `compensatory_sequences` | Canonical pairs differing from dominant_pair at both positions. |  |  |  | all |
+| `consistent_sequences` | Canonical pairs differing from dominant_pair at one position. |  |  |  | all |
+| `covarying` | True when compensatory_sequences > 0. |  |  |  | all |
+
+## Profile match/insert states (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `profile_source` | Where match/insert states came from (A2M/A3M or #=GC RF). |  |  |  | all |
+| `match_states` | Match-state columns. |  |  |  | all |
+| `insert_columns` | Insert columns (#=GC RF '.'). |  |  |  | all |
+| `mean_match_state_coverage` | Mean fraction of match states occupied by a residue. |  |  |  | all |
+| `total_inserted_residues` | Residues in insert states, all sequences. |  |  |  | all |
+| `sequences_with_insertions` | Sequences with at least one inserted residue. |  |  |  | all |
+| `insert_positions_used` | Positions between match states where any sequence inserts. |  |  |  | all |
+| `max_sequences_inserting_at_one_position` | Largest number of sequences inserting at one position. |  |  |  | all |
+
+## Profile match/insert states (per sequence)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `sequence_id` | Sequence identifier. |  |  |  | all |
+| `match_states` | Match-state columns. |  |  |  | all |
+| `match_states_occupied` | Match states with a residue in this sequence. |  |  |  | all |
+| `match_state_coverage` | match_states_occupied / match_states. |  |  |  | all |
+| `deletions` | Match states deleted ('-') in this sequence. |  |  |  | all |
+| `inserted_residues` | Lowercase (insert-state) residues in this sequence. |  |  |  | all |
+| `insertion_events` | Positions with at least one inserted residue. |  |  |  | all |
+
+## Partitions (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `partitions` | Declared partitions. |  |  |  | all |
+| `partition_sites_assigned` | Alignment columns in at least one partition. |  |  |  | all |
+| `partition_sites_unassigned` | Columns in no partition. |  |  |  | all |
+| `partition_sites_overlapping` | Column assignments beyond the first (overlapping partitions, e.g. genes and codon positions). |  |  |  | all |
+| `partitions_failing_composition_test` | Partitions with composition χ² p < 0.05. |  |  |  | all |
+
+## Partitions (per partition)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `partition` | Partition name. |  |  |  | all |
+| `datatype` | Data type from the partition file, if given. |  |  |  | all |
+| `sites_declared` | Columns listed for the partition. |  |  |  | all |
+| `sites_in_alignment` | Declared columns inside the alignment. |  |  |  | all |
+| `occupancy` | Residue fraction of the partition's cells. |  |  |  | all |
+| `gap_fraction` | Gap fraction of the partition's cells. |  |  |  | all |
+| `sequences_without_data` | Sequences with only gaps/missing data in the partition. |  |  |  | all |
+| `variable_sites` | Variable columns in the partition. |  |  |  | all |
+| `parsimony_informative_sites` | Parsimony-informative columns in the partition. |  |  |  | all |
+| `entropy_mean` | Mean column entropy in the partition. |  |  |  | all |
+| `gc_content` | GC fraction (nucleotides). |  |  |  | dna, rna, codon |
+| `composition_chi2` | Pearson χ² of the sequence × residue count table. |  |  | < 2 sequences or states with data. | all |
+| `composition_chi2_df` | Degrees of freedom (rows − 1)(columns − 1). |  |  |  | all |
+| `composition_chi2_p` | Upper-tail χ² p-value; small values indicate compositional heterogeneity. |  |  |  | all |
+
+## Block alignments (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `alignment_kind` | Data model of the input. |  |  |  | all |
+| `detected_format` | Detected input format. |  |  |  | all |
+| `blocks` | Alignment blocks. |  |  |  | all |
+| `genomes` | Distinct genomes (MAF 'genome.chrom' prefix; XMFA sequence index/file). |  |  |  | all |
+| `reference_genome` | Genome of the first row of the first block. |  |  |  | all |
+| `total_block_columns` | Sum of block widths. |  |  |  | all |
+| `min_block_columns` | Narrowest block. |  |  |  | all |
+| `median_block_columns` | Median block width. |  |  |  | all |
+| `max_block_columns` | Widest block. |  |  |  | all |
+| `n50_block_columns` | Block-width N50. |  |  |  | all |
+| `mean_genomes_per_block` | Mean distinct genomes per block. |  |  |  | all |
+| `blocks_with_all_genomes` | Blocks containing every genome. |  |  |  | all |
+| `reference_aligned_fraction` | Reference bases covered by blocks / reference size. |  |  | Source sizes not in the format (XMFA, AXT). | all |
+| `minus_strand_rows` | Block rows on the minus strand. |  |  |  | all |
+| `collinearity_breakpoints` | Adjacent blocks (reference order) whose chromosome, strand or order differs in another genome. |  |  |  | all |
+| `duplicated_bases` | Aligned bases minus covered bases (bases aligned more than once). |  |  |  | all |
+
+## Block alignments (per block)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `block` | Block number (1-based, file order). |  |  |  | all |
+| `columns` | Block width. |  |  |  | all |
+| `rows` | Rows in the block. |  |  |  | all |
+| `genomes` | Distinct genomes in the block. |  |  |  | all |
+| `reference_src` | Source sequence of the first row. |  |  |  | all |
+| `reference_start` | 0-based forward-strand start of the first row. |  |  |  | all |
+| `reference_end` | Half-open end of the first row. |  |  |  | all |
+| `reference_strand` | Strand of the first row. |  |  |  | all |
+| `gap_fraction` | Gap fraction of the block. |  |  |  | all |
+| `variable_sites` | Variable columns in the block. |  |  |  | all |
+| `mean_consensus_identity` | Mean identity of rows to the block consensus. |  |  |  | all |
+| `score` | Block score from the file. |  |  |  | all |
+
+## Block alignments (per genome)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `genome` | Genome name. |  |  |  | all |
+| `is_reference` | True for the reference genome. |  |  |  | all |
+| `blocks_present` | Blocks containing this genome. |  |  |  | all |
+| `block_fraction` | blocks_present / blocks. |  |  |  | all |
+| `aligned_bases` | Sum of aligned interval lengths. |  |  |  | all |
+| `covered_bases` | Union of aligned intervals. |  |  |  | all |
+| `duplicated_bases` | aligned_bases − covered_bases. |  |  |  | all |
+| `genome_size` | Sum of source sizes (MAF). |  |  |  | all |
+| `aligned_fraction` | covered_bases / genome_size. |  |  |  | all |
+| `minus_strand_rows` | Rows on the minus strand. |  |  |  | all |
+| `blocks_with_multiple_copies` | Blocks containing this genome more than once (paralogy/duplication). |  |  |  | all |
+| `collinearity_breakpoints` | Rearrangement breakpoints relative to the reference. |  |  |  | all |
+
+## Read alignments (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `alignment_kind` | Data model of the input. |  |  |  | all |
+| `detected_format` | Detected input format. |  |  |  | all |
+| `references` | Reference sequences in the header. |  |  |  | all |
+| `reference_bases` | Total reference length. |  |  |  | all |
+| `records` | Alignment records. |  |  |  | all |
+| `primary_reads` | Records that are neither secondary nor supplementary. |  |  |  | all |
+| `secondary_records` | Flag 0x100. |  |  |  | all |
+| `supplementary_records` | Flag 0x800. |  |  |  | all |
+| `unmapped_reads` | Primary records with flag 0x4. |  |  |  | all |
+| `mapping_rate` | Mapped primary reads / primary reads. |  |  |  | all |
+| `duplicate_reads` | Primary reads with flag 0x400. |  |  |  | all |
+| `qc_fail_reads` | Primary reads with flag 0x200. |  |  |  | all |
+| `paired_reads` | Primary reads with flag 0x1. |  |  |  | all |
+| `properly_paired_reads` | Primary reads with flag 0x2. |  |  |  | all |
+| `mean_mapq` | Mean MAPQ of mapped primary reads (255 excluded). |  |  |  | all |
+| `median_mapq` | Median MAPQ. |  |  |  | all |
+| `mapq_ge_30_fraction` | Fraction with MAPQ ≥ 30. |  |  |  | all |
+| `mapq_0_fraction` | Fraction with MAPQ 0 (multi-mapping). |  |  |  | all |
+| `aligned_bases` | CIGAR M/=/X bases of mapped primary reads. |  |  |  | all |
+| `inserted_bases` | CIGAR I bases. |  |  |  | all |
+| `deleted_bases` | CIGAR D bases. |  |  |  | all |
+| `indel_rate` | (I + D) / aligned_bases. |  |  |  | all |
+| `mismatch_rate` | Mismatches / aligned bases, from =/X CIGAR or NM − I − D. |  |  | NM missing and no =/X CIGAR. | all |
+| `soft_clipped_bases` | CIGAR S bases. |  |  |  | all |
+| `hard_clipped_bases` | CIGAR H bases. |  |  |  | all |
+| `clipped_read_fraction` | Mapped primary reads with any clipping. |  |  |  | all |
+| `spliced_reads` | Mapped reads with CIGAR N (spliced/split). |  |  |  | all |
+| `mean_read_length` | Mean read length. |  |  |  | all |
+| `n50_read_length` | Read-length N50. |  |  |  | all |
+| `mean_base_quality` | Mean Phred base quality. |  |  |  | all |
+| `median_insert_size` | Median |TLEN| of properly paired first mates. |  |  |  | all |
+| `mean_depth` | Length-weighted mean depth over references. |  |  | No @SQ lengths, or references too large. | all |
+| `breadth_1x` | Fraction of reference bases with depth ≥ 1. |  |  |  | all |
+| `breadth_10x` | Fraction of reference bases with depth ≥ 10. |  |  |  | all |
+
+## Read alignments (per reference)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `reference` | Reference name. |  |  |  | all |
+| `length` | Reference length (@SQ LN). |  |  |  | all |
+| `primary_mapped_reads` | Primary reads mapped to the reference. |  |  |  | all |
+| `mean_depth` | Mean depth. |  |  |  | all |
+| `median_depth` | Median depth. |  |  |  | all |
+| `breadth_1x` | Fraction of bases with depth ≥ 1. |  |  |  | all |
+| `breadth_10x` | Fraction of bases with depth ≥ 10. |  |  |  | all |
+| `breadth_30x` | Fraction of bases with depth ≥ 30. |  |  |  | all |
+
+## Mappings and hits (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `alignment_kind` | Data model of the input. |  |  |  | all |
+| `detected_format` | Detected input format. |  |  |  | all |
+| `records` | Hit/mapping records. |  |  |  | all |
+| `queries` | Distinct queries. |  |  |  | all |
+| `targets` | Distinct targets (sequences or graph paths). |  |  |  | all |
+| `multi_hit_queries` | Queries with more than one record. |  |  |  | all |
+| `mean_identity` | Mean per-record identity (format-specific definition). |  |  |  | all |
+| `median_identity` | Median per-record identity. |  |  |  | all |
+| `length_weighted_identity` | Identity weighted by alignment length. |  |  |  | all |
+| `total_aligned_length` | Sum of alignment lengths. |  |  |  | all |
+| `median_alignment_length` | Median alignment length. |  |  |  | all |
+| `minus_strand_fraction` | Records on the minus strand. |  |  |  | all |
+| `mean_mapq` | Mean MAPQ (PAF/GAF). |  |  |  | all |
+| `mapq_ge_30_fraction` | Fraction with MAPQ ≥ 30. |  |  |  | all |
+| `mean_query_coverage` | Mean over queries of covered bases / query length. |  |  | Query lengths not in the format. | all |
+| `mean_target_coverage` | Mean over targets of covered bases / target length. |  |  | Target lengths not in the format. | all |
+| `min_evalue` | Smallest e-value (BLAST). |  |  |  | all |
+
+## Mappings and hits (per query / target)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `query` | Query name. |  |  |  | all |
+| `target` | Target name. |  |  |  | all |
+| `length` | Declared length. |  |  |  | all |
+| `hits` | Records involving this sequence. |  |  |  | all |
+| `covered_bases` | Union of aligned intervals. |  |  |  | all |
+| `coverage` | covered_bases / length. |  |  |  | all |
+
+## Sequence graphs (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `alignment_kind` | Data model of the input. |  |  |  | all |
+| `detected_format` | Detected input format. |  |  |  | all |
+| `segments` | Segments (S lines). |  |  |  | all |
+| `total_segment_bases` | Sum of segment lengths. |  |  |  | all |
+| `mean_segment_length` | Mean segment length. |  |  |  | all |
+| `n50_segment_length` | Segment-length N50. |  |  |  | all |
+| `links` | Links (L lines). |  |  |  | all |
+| `connected_components` | Weakly connected components. |  |  |  | all |
+| `isolated_segments` | Segments without links. |  |  |  | all |
+| `tip_segments` | Segments with links on one side only. |  |  |  | all |
+| `branching_segment_ends` | Segment ends with more than one link (bubble/branch points). |  |  |  | all |
+| `max_degree` | Largest number of links on one segment. |  |  |  | all |
+| `paths` | Paths (P) and walks (W). |  |  |  | all |
+| `mean_path_bases` | Mean path length in bases. |  |  |  | all |
+| `segments_on_paths` | Segments traversed by at least one path. |  |  |  | all |
+| `core_segments` | Segments on every path. |  |  |  | all |
+| `shell_segments` | Segments on more than one but not all paths. |  |  |  | all |
+| `private_segments` | Segments on exactly one path. |  |  |  | all |
+| `core_bases_fraction` | Bases in core segments / all segment bases. |  |  |  | all |
+| `reference_rank0_segments` | rGFA segments with SR:i:0 (reference backbone). |  |  |  | all |
+
+## Sequence graphs (per segment)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `segment` | Segment name. |  |  |  | all |
+| `length` | Segment length. |  |  |  | all |
+| `degree` | Links touching the segment. |  |  |  | all |
+| `left_links` | Links on the segment's left end. |  |  |  | all |
+| `right_links` | Links on the segment's right end. |  |  |  | all |
+| `paths` | Paths/walks traversing the segment. |  |  |  | all |
+| `rgfa_rank` | rGFA SR rank. |  |  |  | all |
+
+## Sequence graphs (per path)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `path` | Path or walk name (walk: sample#hap#seq:start-end). |  |  |  | all |
+| `segments` | Segment steps. |  |  |  | all |
+| `bases` | Path length in bases. |  |  |  | all |
+| `distinct_segments` | Distinct segments visited. |  |  |  | all |
+
+## Profile HMMs (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `alignment_kind` | Data model of the input. |  |  |  | all |
+| `detected_format` | Detected input format. |  |  |  | all |
+| `model_name` | NAME line. |  |  |  | all |
+| `model_accession` | ACC line. |  |  |  | all |
+| `alphabet` | ALPH line. |  |  |  | all |
+| `model_length` | Match states (LENG). |  |  |  | all |
+| `training_sequences` | Sequences used to build the model (NSEQ). |  |  |  | all |
+| `effective_sequences` | Effective sequence number (EFFN / NEFF). |  |  |  | all |
+| `mean_match_entropy_bits` | Mean Shannon entropy of match-state emissions (HMMER3). |  |  |  | all |
+| `mean_match_relative_entropy_bits` | Mean relative entropy of match emissions vs the model COMPO composition. |  |  |  | all |
+
+## Profile HMMs (per match state)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `match_state` | Match-state index. |  |  |  | all |
+| `consensus` | Most probable residue. |  |  |  | all |
+| `max_emission` | Largest emission probability. |  |  |  | all |
+| `entropy_bits` | Shannon entropy of emissions. |  |  |  | all |
+| `relative_entropy_bits` | Relative entropy vs COMPO. |  |  |  | all |
 
