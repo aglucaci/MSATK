@@ -19,9 +19,10 @@ bibliography: references.bib
 
 <!--
 DRAFT — Bioinformatics Application Note (target ≤ 2,000 words + 1 figure).
-Sections marked [TODO] require experiments that have not yet been run; do not
-submit until they are filled with measured results. Word budget per section is
-given in comments.
+All numbers are measured; regenerate with the scripts in paper/analysis/
+(see paper/analysis/README.md). Supplementary material: paper/supplement.md.
+Before submission: confirm the Table S2 feature entries against current releases
+of the compared tools, and add AliStat to Table 2 if it can be run.
 -->
 
 # Abstract
@@ -38,8 +39,11 @@ findings, publication-quality figures, an interactive offline HTML report, and
 reproducible numerical and image representations for machine learning. All metrics
 share one molecule-aware character policy, undefined quantities are reported as
 missing rather than zero, and every output field is defined in a versioned metric
-dictionary. A vectorised core profiles a 5,000 × 10,000 alignment in about five
-seconds.
+dictionary. On public protein-family and viral alignments, shared metrics agree
+exactly with AMAS, and the vectorised core computes all statistics for a
+5,000 × 10,000 alignment in 4.2 s. In a 400-sequence influenza haemagglutinin
+dataset, MSATK's quality-control rules flagged 16 of 20 non-human-host sequences,
+whose removal halved estimated nucleotide diversity.
 
 **Availability and implementation:** MSATK is implemented in Python (≥ 3.10) and
 released under the MIT licence at https://github.com/aglucaci/MSATK, with
@@ -140,40 +144,117 @@ channel); physicochemical channels for proteins [@kyte1982hydropathy;
 @zamyatnin1972]; and per-cell QC feature channels. Instead of resizing, alignments
 are cut into integer-exact windows with padding masks and per-tile original
 coordinates. Every export carries a manifest, and a framework-agnostic dataset class
-feeds PyTorch or TensorFlow directly.
+feeds PyTorch [@paszke2019pytorch] or TensorFlow directly. Table 1 summarises the
+outputs by resolution.
+
+**Table 1.** MSATK outputs by resolution. All fields are defined in the metric
+dictionary (145 entries in v0.2.0); "–" marks statistics that are undefined and
+reported as null rather than zero.
+
+| Resolution | Main outputs | Undefined (null) when |
+|---|---|---|
+| Alignment (81) | size, occupancy, gap/missing/ambiguous fractions; constant, variable, parsimony-informative, singleton, gap-free and complete sites; mean entropy; mean/min/max pairwise identity; π, θ<sub>W</sub>, Tajima's D, haplotype count and diversity, Ts/Tv (nucleotides) | N < 2 or no complete site (π, θ<sub>W</sub>); N < 4 or S = 0 (Tajima's D); no transversions (Ts/Tv); no comparable pair (identity) |
+| Site (23) | site class, occupancy, gap fraction, dominant residue and support, Shannon entropy, normalised entropy, effective states, information content, parsimony class; codon position (codon), GC (nucleotides) | column has no canonical residue ("unobserved") |
+| Sequence (35) | original/ungapped length, span, leading/trailing/internal gaps, gap runs, ambiguity, composition and composition distance, identity to consensus, nearest neighbour, duplicate-of, robust z-scores, outlier score | all-gap row (span); no comparable column (consensus identity) |
+| Pair (6) | identity, p-distance, comparable sites, overlap; exact or seeded-sample policy recorded | pair shares no comparable site |
+| QC | 16 rules; findings with code, severity, scope, message, suggestion and affected IDs/sites | – |
+| Figures | alignment overview, per-site tracks, residue-level alignment, sequence logo, identity heatmap, embeddings; PNG/SVG/PDF/TIFF | – |
+| ML | categorical (lossless), one-hot (3 ambiguity policies), physicochemical (7 ch.), QC feature channels (7 ch.), windows with masks, RGB and label images; NPZ + manifest | – |
 
 # 4 Results
 
-<!-- ~450 words -->
+<!-- ~600 words; analyses reproducible with paper/analysis/*.py -->
 
-**Correctness.** The test suite (93 tests) checks hand-calculated values for
-edge cases including all-gap columns, non-overlapping pairs, padding, molecule-specific
+**Correctness.** The test suite (97 tests) checks hand-calculated values for edge
+cases including all-gap columns, non-overlapping pairs, padding, molecule-specific
 interpretation of `N`, entropy bounds, parsimony and singleton definitions and gap
-runs. Nucleotide diversity, Watterson's θ and Tajima's D agree with scikit-allel to
-floating-point precision on randomly generated populations. Categorical encodings
-reconstruct the input alignment exactly, and one-hot cells sum to one under every
+runs. Nucleotide diversity, Watterson's θ and Tajima's D agree with scikit-allel
+[@miles2023allel] to floating-point precision on simulated populations. Categorical
+encodings reconstruct the input exactly, and one-hot cells sum to one under every
 ambiguity policy.
 
-**Performance.** On an Apple M1 Pro (16 GB), computing all statistics without
-pairwise comparison took 0.23 s for 100 × 10,000, 1.0 s for 1,000 × 10,000 and
-4.4 s (1.2 GB peak memory) for 5,000 × 10,000 alignments, scaling linearly with the
-number of cells. Exact all-vs-all identity for 5,000 sequences (12.5 million pairs)
-added about 4 s; the default sampled policy added 0.3 s (`docs/benchmarks.md`).
+**Agreement and runtime versus AMAS.** We compared MSATK with AMAS v1.0
+[@borowiec2016amas] on four Pfam seed alignments [@mistry2021pfam], 400 influenza
+haemagglutinin coding sequences from GenBank [@sayers2023genbank] and two synthetic
+DNA alignments (Table 2; Supplementary Table S1). Number of sequences, length,
+missing-data percentage, variable sites and parsimony-informative sites were
+identical for all seven alignments, including the 22 IUPAC-ambiguous cells in the
+influenza data. Including interpreter start-up, MSATK was 2.4–2.9× faster than AMAS
+on 10⁷–5 × 10⁷-cell alignments while also computing per-site, per-sequence and
+population-genetic statistics; on alignments of a few thousand cells, AMAS was
+faster (0.03 s versus 0.13 s) because MSATK's start-up dominates. A feature
+comparison with AliStat, CIAlign, trimAl and Jalview is given in Supplementary
+Table S2. On a 5,000 × 10,000 alignment, exact all-vs-all identity
+(12.5 million pairs) added about 4 s to the statistics run, and the default sampled
+policy added 0.3 s (`docs/benchmarks.md`).
 
-**Comparison with existing tools.** [TODO: agreement of shared metrics — alignment
-length, missing-data proportion, variable and parsimony-informative sites — with
-AMAS and AliStat on public DNA and protein alignments; runtime on the same inputs;
-feature-coverage table versus AMAS, AliStat, CIAlign, trimAl and Jalview, moved to
-the Supplement.]
+**Table 2.** Shared metrics and runtime, MSATK v0.2.0 versus AMAS v1.0 (Apple M1 Pro,
+median of three runs, each a fresh process). Var., variable sites; PI,
+parsimony-informative sites. Missing (%) counts gaps and missing-data symbols.
 
-**Use cases.** [TODO: (i) a viral coding-sequence alignment: frame integrity, codon
-usage, positional entropy, outlier sequences and the QC report before selection
-analysis; (ii) a protein-family alignment: physicochemical conservation, clustering,
-alignment figures and windowed tensor export loaded by PyTorch.]
+| Alignment | N × L | Missing (%) | Var. | PI | Agree | AMAS (s) | MSATK (s) |
+|---|---|---|---|---|---|---|---|
+| PF00042 globin | 73 × 141 | 18.88 | 134 | 119 | yes | 0.03 | 0.13 |
+| PF00069 protein kinase | 37 × 419 | 36.14 | 374 | 271 | yes | 0.03 | 0.13 |
+| PF00071 Ras | 60 × 229 | 27.72 | 184 | 160 | yes | 0.03 | 0.12 |
+| PF00076 RRM | 68 × 79 | 12.10 | 77 | 71 | yes | 0.03 | 0.13 |
+| Influenza H3N2 HA (CDS) | 400 × 1,701 | 0.00 | 789 | 666 | yes | 0.17 | 0.19 |
+| Synthetic DNA | 1,000 × 10,000 | 0.50 | 10,000 | 10,000 | yes | 2.53 | 1.04 |
+| Synthetic DNA | 5,000 × 10,000 | 0.50 | 10,000 | 10,000 | yes | 12.34 | 4.20 |
 
-**Figure 1.** [TODO: four panels built from real MSATK outputs — (A) architecture;
-(B) statistical outputs/site tracks; (C) residue-level alignment figure with logo;
-(D) ML encodings and windows with manifest.]
+**Use case 1: QC of a viral coding alignment before selection analysis.** We
+retrieved the haemagglutinin CDS of 400 GenBank records annotated as influenza
+A(H3N2) (publication year 2017); all were 1,701 nt and formed an ungapped codon
+alignment. `msatk profile --type codon --preset comprehensive` completed in 8.7 s.
+Frame checks found a terminal stop codon in every sequence, no internal stops and
+no frame warnings. Mean entropy at third codon positions (0.142 bits) was 3.4–3.7
+times that at first and second positions (0.042 and 0.038), as expected for
+predominantly synonymous variation. QC reported 134 sequences identical to an
+earlier one and flagged 27 as divergent from the consensus (Fig. 1B). Host labels
+parsed from the record titles showed that the divergent set contained all four
+canine, three avian and three environmental sequences and six of ten swine
+sequences (16 of 20 non-human-host sequences; identity to consensus 0.79–0.95,
+versus ≥ 0.985 for every unflagged sequence). The four unflagged swine sequences
+were human-like (identity to consensus ≥ 0.986; one had a human strain as nearest
+neighbour at 99.94% identity). The remaining 11 flagged sequences were human
+strains at the low tail of the human distribution (0.977–0.981). Removing the 27
+flagged sequences halved nucleotide diversity (π from 0.0233 to 0.0119) and
+Watterson's θ (0.070 to 0.035), and reduced the segregating sites from 789 to 387,
+whereas Tajima's D changed little (−2.05 to −2.01). Mixed-host data of this kind
+would otherwise inflate diversity-dependent estimates, such as those used in
+selection analyses [@pond2020hyphy].
+
+**Use case 2: a protein family from statistics to tensors.** For the Ras family
+seed alignment (PF00071; 60 × 229, 27.7% gaps, mean pairwise identity 0.38), QC
+flagged 67 columns with more than 50% gaps; all 67 are insert-state columns
+(marked `.` in the Pfam alignment). Among the 162 columns with at most 50% gaps, four guanine-nucleotide-binding
+motifs [@bourne1991gtpase], located in the alignment by searching a reference
+sequence (RAS2_YEAST), had mean information content of 3.39–4.25 bits, compared
+with a median of 1.96 bits for the other occupied columns. Thirteen of the 21 motif
+columns were among the 20 most informative occupied columns. Physicochemical
+encoding showed the same constraint: the median per-column standard deviation of
+Kyte–Doolittle hydropathy was 0.01 in motif columns and 1.79 elsewhere. MSATK
+rendered the region as a residue-level figure with tracks and a sequence logo
+(Fig. 1C). A one-hot export cut into 64-site × 32-row windows (stride 32) produced
+14 tiles with padding masks and per-tile coordinates in 15 ms, and these loaded
+directly into a PyTorch `DataLoader` as tensors of shape 8 × 22 × 32 × 64 (Fig. 1D).
+
+![](figures/figure1.png)
+
+**Figure 1.** MSATK architecture and outputs generated from real data.
+(**A**) One molecule-aware encoding of the alignment feeds all statistics, QC,
+figures, the report and ML exports, each carrying provenance. (**B**) Left: per-site
+information content (top) and gap fraction (bottom) for the Ras family (PF00071);
+shaded bands mark the G1, G3, G4 and G5 motifs and grey bars mark columns with more
+than 50% gaps. Right: identity to consensus for 400 influenza H3N2 haemagglutinin
+sequences, coloured by host label from GenBank titles; outlined points were flagged
+DIVERGENT_SEQUENCES by QC. (**C**) Residue-level alignment figure for Ras sites 1–50
+(20 sequences ordered by identity to consensus) with conservation and gap tracks,
+and a small-sample-corrected logo of sites 1–20 showing the P-loop (GxxxxGK[ST]).
+(**D**) RGB rendering of the full Ras alignment (display only) with the 64 × 32
+window grid; one-hot channels for one row of tile 0; and an excerpt of the manifest
+that records shape, axes, ambiguity policy, padding masks and original coordinates
+for each tile. All panels are produced by `paper/analysis/make_figure1.py`.
 
 # 5 Discussion
 
@@ -185,7 +266,9 @@ and machine-readable, and the same engine drives statistics, figures, reports an
 ML encodings. MSATK does not build, trim or edit alignments, and it does not perform
 model-based evolutionary inference; it complements aligners, trimmers and
 phylogenetic software. Population-genetic statistics assume homologous population
-samples and use complete sites only. The interactive viewer is limited to alignments
+samples and use complete sites only, and per-site information content is computed
+over observed residues, so sparsely occupied columns should be read together with
+their occupancy (Fig. 1B). The interactive viewer is limited to alignments
 of up to three million cells, and alignments much larger than memory require
 streaming, which is planned together with coevolution statistics and alternative
 genetic codes.
