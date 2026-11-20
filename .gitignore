@@ -19,8 +19,5 @@ results/
 .venv/
 venv/
 
-# Application Note results: keep the small summaries and figure panels,
-# ignore the full regenerated MSATK output directories
-!paper/analysis/results/
-paper/analysis/results/h3n2/
-paper/analysis/results/ras_ml/
+# Application Note manuscript, analyses and PDFs are kept locally, not in the repo
+paper/
