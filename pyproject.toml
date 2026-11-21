@@ -9,7 +9,7 @@ description = "Statistical profiling, visualization and machine-learning represe
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Alexander Lucaci" }]
+authors = [{ name = "Alexander G. Lucaci" }]
 keywords = ["bioinformatics", "multiple sequence alignment", "phylogenetics", "codon usage", "RSCU", "sequence analysis", "quality control", "machine learning", "sequence logo"]
 classifiers = [
   "Development Status :: 4 - Beta",
