@@ -2,8 +2,8 @@ site_name: MSATK
 site_description: Multiple Sequence Alignment Toolkit
 theme:
   name: material
-  logo: assets/msatk_logo.png
-  favicon: assets/msatk_logo.png
+  logo: assets/msatk_mark.png
+  favicon: assets/msatk_mark.png
 nav:
   - Home: index.md
   - Installation: installation.md

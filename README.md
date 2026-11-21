@@ -1,7 +1,10 @@
 # MSATK: Multiple Sequence Alignment Tool-Kit
 
 <p align="center">
-  <img src="logo/msatk_logo.png" alt="MSATK logo" width="420">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="logo/msatk_logo_dark.png">
+    <img src="logo/msatk_logo.png" alt="MSATK logo" width="420">
+  </picture>
 </p>
 
 ![Tests](https://github.com/aglucaci/MSATK/actions/workflows/tests.yml/badge.svg)

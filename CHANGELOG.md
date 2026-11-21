@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+Logo:
+
+- New logo (v4), drawn reproducibly by `logo/make_logo.py` as SVG and PNG, with dark
+  variants and a square mark used for the docs header, favicon and HTML reports. Earlier
+  logos (v1-v3) are kept in `logo/archive/`; see `logo/README.md`.
+
 Tutorials and datasets:
 
 - Seven tutorials (`docs/tutorials/`) covering profiling, Python statistics, viral codon
