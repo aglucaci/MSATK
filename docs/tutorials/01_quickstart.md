@@ -124,11 +124,17 @@ ras_profile/run_manifest.json
 ras_profile/summary.json
 ras_profile/tables/alignment_summary.csv
 ras_profile/tables/amino_acid_summary.csv
+ras_profile/tables/characterization_summary.csv
+ras_profile/tables/cluster_size_distribution.csv
 ras_profile/tables/composition_summary.csv
+ras_profile/tables/contiguous_blocks.csv
 ras_profile/tables/distance_matrix.csv
 ras_profile/tables/entropy_by_site.csv
 ras_profile/tables/gap_blocks.csv
+ras_profile/tables/gap_run_length_distribution.csv
+ras_profile/tables/gap_structure_by_sequence.csv
 ras_profile/tables/hydrophobicity_summary.csv
+ras_profile/tables/pair_completeness_matrix.csv
 ras_profile/tables/pairwise_comparisons.csv
 ras_profile/tables/pairwise_identity_matrix.csv
 ras_profile/tables/per_sequence_stats.csv
@@ -136,7 +142,8 @@ ras_profile/tables/per_site_stats.csv
 ras_profile/tables/qc_findings.csv
 ras_profile/tables/qc_flags.csv
 ras_profile/tables/residue_class_summary.csv
-ras_profile/tables/site_substitution_scores.csv
+ras_profile/tables/sequence_completeness.csv
+... (2 more lines)
 ```
 
 ## Read the summary

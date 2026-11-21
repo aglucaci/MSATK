@@ -16,6 +16,10 @@ bundle = msa.stats()            # StatisticsBundle: summary, sites, sequences, p
 # Quality control
 findings = msa.qc()             # list of dicts, severity-ranked
 
+# Characterization (completeness, N_eff, heterogeneity, windows, coevolution, ...)
+char = msa.characterize("comprehensive")     # .summaries, .tables, .applicability
+msa.compute(["redundancy.effective_sequences", "rcv", "sequence_weights"])  # only what is needed
+
 # Human visualisation
 msa.plot_alignment("alignment.svg", start=1, end=300, theme="nucleotide")
 msa.plot_logo("logo.pdf", start=1, end=60)

@@ -167,7 +167,9 @@ def render_interactive_report(
         .replace("{{INTERPRETATION}}", escape(interpretation_text))
         .replace("{{STEPS}}", steps)
         .replace("{{LINKS}}", links)
-        .replace("{{SPECIALIZED}}", _specialized_section(summary))
+        .replace(
+            "{{SPECIALIZED}}", _specialized_section(summary) + _characterization_section(summary)
+        )
         .replace("{{DATA}}", _json_for_script(data))
     )
 
@@ -205,6 +207,42 @@ def _specialized_section(summary: dict[str, Any]) -> str:
         '<section id="specialized"><h2>Specialized analyses</h2>'
         '<p class="muted">Analyses that apply only to some inputs run only when valid; '
         "tables are in <code>tables/</code>.</p>"
+        f"<table><thead><tr><th>Analysis</th><th>Status</th></tr></thead><tbody>{status}</tbody></table>"
+        + "".join(blocks)
+        + "</section>"
+    )
+
+
+def _characterization_section(summary: dict[str, Any]) -> str:
+    """Static section with the characterization analyses (completeness, N_eff, ...)."""
+
+    from msatk.stats.characterization import TITLES
+
+    char = summary.get("characterization") or {}
+    why = summary.get("characterization_applicability") or {}
+    if not why:
+        return ""
+    status = "".join(
+        f"<tr><td>{escape(TITLES.get(k, k))}</td><td>{escape(str(v))}</td></tr>"
+        for k, v in why.items()
+        if not str(v).startswith("not requested")
+    )
+    blocks = []
+    for name, values in char.items():
+        rows = "".join(
+            f"<tr><td><code>{escape(k)}</code></td><td>{escape(format_value(v, k))}</td></tr>"
+            for k, v in values.items()
+        )
+        blocks.append(
+            f"<details><summary>{escape(TITLES.get(name, name))}</summary>"
+            f"<table><tbody>{rows}</tbody></table></details>"
+        )
+    profile = escape(str(summary.get("characterization_profile", "")))
+    return (
+        '<section id="characterization"><h2>Alignment characterization</h2>'
+        f'<p class="muted">Metrics profile <code>{profile}</code>. Every field is defined in '
+        "<code>metric_dictionary.json</code>; per-sequence, per-site and per-window tables "
+        "are in <code>tables/</code>.</p>"
         f"<table><thead><tr><th>Analysis</th><th>Status</th></tr></thead><tbody>{status}</tbody></table>"
         + "".join(blocks)
         + "</section>"
@@ -332,7 +370,7 @@ canvas.heat{border:1px solid var(--line);border-radius:6px;max-width:100%}
 <div style="margin-left:auto"><button id="themeBtn" title="Toggle light/dark">◐</button></div></div></header>
 <nav class="tabs"><div class="wrap">
 <a href="#overview">Overview</a><a href="#qc">QC</a><a href="#viewer">Alignment</a><a href="#sites">Sites</a>
-<a href="#sequences">Sequences</a><a href="#pairwise">Pairwise</a><a href="#specialized">Specialized</a><a href="#figures">Figures</a><a href="#repro">Reproducibility</a>
+<a href="#sequences">Sequences</a><a href="#pairwise">Pairwise</a><a href="#specialized">Specialized</a><a href="#characterization">Characterization</a><a href="#figures">Figures</a><a href="#repro">Reproducibility</a>
 </div></nav>
 <main class="wrap">
 <section id="overview"><h2>Overview</h2>

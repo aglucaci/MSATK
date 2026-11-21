@@ -24,9 +24,9 @@ OUTPUT_SCHEMA_VERSION = "2.0"
 
 PRESETS: dict[str, dict[str, Any]] = {
     # Fast: no all-vs-all comparison, no extra figures.
-    "basic": {"pairwise": "none", "alignment_figure": False, "plots": "png"},
+    "basic": {"pairwise": "none", "alignment_figure": False, "plots": "png", "metrics": "core"},
     # Default: size-aware pairwise, standard figures, alignment overview.
-    "standard": {"pairwise": "auto", "alignment_figure": True, "plots": "png"},
+    "standard": {"pairwise": "auto", "alignment_figure": True, "plots": "png", "metrics": "core"},
     # Everything, including exact pairwise, PCA embedding and SVG copies of figures.
     "comprehensive": {
         "pairwise": "exact",
@@ -34,6 +34,7 @@ PRESETS: dict[str, dict[str, Any]] = {
         "plots": "png,svg",
         "embeddings": "pca",
         "encodings": ["categorical", "onehot"],
+        "metrics": "comprehensive",
     },
 }
 
@@ -58,8 +59,11 @@ class MSATK:
         seed: int = 0,
         genetic_code: int = 1,
         partitions: str | Path | None = None,
+        metrics: str = "core",
     ) -> None:
         self.path = Path(path)
+        self.metrics_profile = metrics
+        self._characterizations: dict[tuple[Any, ...], Any] = {}
         self.genetic_code = int(genetic_code)
         self.partitions_file = Path(partitions) if partitions else None
         self.validation_mode = validation_mode
@@ -299,8 +303,14 @@ class MSATK:
         self_contained: bool = False,
         encodings: list[str] | None = None,
         preset: str | None = None,
+        metrics: str | None = None,
     ) -> dict[str, Any]:
-        """Run the complete profile and write all outputs to ``outdir``."""
+        """Run the complete profile and write all outputs to ``outdir``.
+
+        ``metrics`` selects the characterization profile (``core``, ``comprehensive``,
+        ``evolutionary``, ``coevolution``, ``all`` or ``none``); by default the
+        preset's profile, else the one given to the constructor.
+        """
 
         from msatk.plots.basic import parse_plot_formats
 
@@ -314,6 +324,13 @@ class MSATK:
                 plot_formats = cfg["plots"]
             embeddings_method = embeddings_method or cfg.get("embeddings")
             encodings = encodings if encodings is not None else cfg.get("encodings")
+            if metrics is None:
+                metrics = cfg.get("metrics")
+        if metrics is not None:
+            from msatk.stats.characterization import resolve
+
+            resolve(metrics, None)  # validate early
+            self.metrics_profile = metrics
         formats = parse_plot_formats(plot_formats)
         if not formats:
             plots = False
@@ -441,6 +458,7 @@ class MSATK:
             "plot_formats": ",".join(formats) if plots else "none",
             "encodings": ",".join(encodings or []) or "none",
             "preset": preset or "",
+            "metrics": self.metrics_profile,
             "max_gap_seq": max_gap_seq,
             "max_gap_site": max_gap_site,
             "output_schema_version": OUTPUT_SCHEMA_VERSION,
@@ -506,7 +524,116 @@ class MSATK:
             + (["partitions (file)"] if self.partitions else []),
             "specialized": self.specialized()[0],
             "analysis_applicability": self.specialized()[2],
+            "characterization_profile": self.metrics_profile,
+            "characterization": self.characterize().summaries,
+            "characterization_applicability": self.characterize().applicability,
         }
+
+    def characterize(
+        self,
+        profile: str | None = None,
+        analyses: list[str] | tuple[str, ...] | None = None,
+        options: dict[str, dict[str, Any]] | None = None,
+    ) -> Any:
+        """Run characterization analyses (see :mod:`msatk.stats.characterization`).
+
+        Returns a ``Characterization`` with ``summaries``, ``tables``,
+        ``applicability`` and ``matrices``. Results are cached per argument set.
+        """
+
+        from msatk.stats.characterization import characterize
+
+        profile = profile or self.metrics_profile
+        key = (profile, tuple(analyses or ()), json.dumps(options or {}, sort_keys=True))
+        if key not in self._characterizations:
+            self._characterizations[key] = characterize(
+                self.stats(),
+                self.sequence_type,
+                profile=profile,
+                analyses=analyses,
+                max_exact_sequences=self.max_exact_sequences,
+                genetic_code=self.genetic_code,
+                seed=self.seed,
+                options=options,
+            )
+        return self._characterizations[key]
+
+    def compute(self, metrics: list[str]) -> dict[str, Any]:
+        """Compute only the requested metrics, by registry name.
+
+        Names are looked up in the metric dictionary (``msatk metrics list``). Use
+        ``level.name`` when a name exists at several levels (e.g.
+        ``redundancy.effective_sequences``); an analysis name (e.g. ``redundancy``)
+        returns its whole summary, and a table name (e.g. ``sequence_weights``)
+        returns its rows. Only the analyses needed are run.
+        """
+
+        from msatk.stats.characterization import ANALYSES
+        from msatk.stats.registry import METRICS
+        from msatk.stats.registry_characterization import CHAR_DEFS, TABLE_LEVELS
+
+        table_owner = _table_owners()
+        base_levels = {"alignment": None, "site": "sites", "sequence": "sequences"}
+        out: dict[str, Any] = {}
+        for request in metrics:
+            if request in ANALYSES:
+                out[request] = self.characterize(analyses=[request]).summaries.get(request)
+                continue
+            table = {v: k for k, v in TABLE_LEVELS.items()}.get(request, request)
+            if table in table_owner:
+                owner = table_owner[table]
+                out[request] = self.characterize(analyses=[owner]).tables.get(table, [])
+                continue
+            level, _, name = request.rpartition(".")
+            levels = [
+                m.level for m in METRICS if m.name == name and (not level or m.level == level)
+            ]
+            levels = list(dict.fromkeys(levels))
+            if not levels:
+                raise KeyError(f"Unknown metric {request!r}; see `msatk metrics list`.")
+            if len(levels) > 1:
+                raise KeyError(
+                    f"{name!r} is defined at several levels {levels}; ask for '<level>.{name}'."
+                )
+            lvl = levels[0]
+            if lvl in base_levels:
+                if lvl == "alignment":
+                    base = self.summary()
+                    out[request] = (
+                        base[name] if name in base else self._provenance_summary().get(name)
+                    )
+                else:
+                    rows = getattr(self.stats(), base_levels[lvl] or "")
+                    out[request] = [
+                        {"id": r.get("sequence_id", r.get("site_index")), name: r.get(name)}
+                        for r in rows
+                    ]
+            elif lvl in ANALYSES:
+                summary = self.characterize(analyses=[lvl]).summaries.get(lvl) or {}
+                out[request] = summary.get(name)
+            elif lvl in CHAR_DEFS:
+                table_name = {v: k for k, v in TABLE_LEVELS.items()}.get(lvl, lvl)
+                producer = table_owner.get(table_name)
+                if producer is None:
+                    raise KeyError(f"{request!r} comes from `msatk compare`, not a profile.")
+                rows = self.characterize(analyses=[producer]).tables.get(table_name, [])
+                key_field = next(
+                    (
+                        k
+                        for k in ("sequence_id", "site_index", "window_start", "rank")
+                        if rows and k in rows[0]
+                    ),
+                    None,
+                )
+                out[request] = [
+                    {key_field: r.get(key_field), name: r.get(name)}
+                    if key_field
+                    else {name: r.get(name)}
+                    for r in rows
+                ]
+            else:
+                out[request] = (self.specialized()[0].get(lvl) or {}).get(name)
+        return out
 
     def specialized(
         self,
@@ -583,6 +710,27 @@ class MSATK:
         site_rows = self.stats().sites
         for name, rows in self.specialized()[1].items():
             write_csv(tables_dir / f"{name}.csv", rows)
+        char = self.characterize()
+        for name, rows in char.tables.items():
+            write_csv(tables_dir / f"{name}.csv", rows)
+        long_rows = [
+            {
+                "analysis": analysis,
+                "metric": metric,
+                "value": json.dumps(value) if isinstance(value, (dict, list)) else value,
+            }
+            for analysis, values in char.summaries.items()
+            for metric, value in values.items()
+        ]
+        if long_rows:
+            write_csv(tables_dir / "characterization_summary.csv", long_rows)
+        completeness = char.matrices.get("pair_completeness")
+        if completeness is not None and len(self.alignment.ids) <= 500:
+            write_matrix_csv(
+                tables_dir / "pair_completeness_matrix.csv",
+                self.alignment.ids,
+                completeness.tolist(),
+            )
         if self.sequence_type == "codon":
             from msatk.codon.analysis import (
                 amino_acid_from_codons,
@@ -693,3 +841,24 @@ def _dependency_versions() -> dict[str, str | None]:
 
 
 AlignmentProfiler = MSATK
+
+
+def _table_owners() -> dict[str, str]:
+    """Characterization table name -> analysis that produces it."""
+
+    return {
+        "sequence_completeness": "completeness",
+        "gap_structure_by_sequence": "gap_structure",
+        "gap_run_length_distribution": "gap_structure",
+        "contiguous_blocks": "gap_structure",
+        "sequence_weights": "redundancy",
+        "cluster_size_distribution": "redundancy",
+        "site_diversity": "site_patterns",
+        "sequence_composition_tests": "composition_heterogeneity",
+        "pair_symmetry_tests": "symmetry_tests",
+        "windows": "windows",
+        "site_properties": "protein_properties",
+        "sequence_substitution_scores": "protein_properties",
+        "pairwise_dnds": "codon_evolution",
+        "coevolution_pairs": "coevolution",
+    }

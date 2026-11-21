@@ -29,9 +29,13 @@ Status key: ✅ done in 0.2 · 🟡 partial · ⬜ not started
 | PDF/TIFF figure export | ✅ |
 | Performance benchmarks and memory-efficient processing | 🟡 harness + results; streaming for >1e9 cells pending |
 | PyTorch/TensorFlow dataset adapters | ✅ (NumPy dataset + tensor adapters) |
-| Mutual information / coevolution, sequence weighting, effective sequence count | ⬜ |
+| Mutual information / coevolution, sequence weighting, effective sequence count | ✅ MI + APC, N_eff; DCA not planned |
 | BLOSUM-based protein similarity and conservation scores | ✅ BLOSUM62 column scores, pairwise similarity |
-| Alternative genetic codes; synonymous/non-synonymous variation | 🟡 all NCBI codes; dN/dS-type variation pending |
+| Alternative genetic codes; synonymous/non-synonymous variation | ✅ all NCBI codes; Nei–Gojobori dN/dS, ENC |
+| Completeness/overlap (AliStat), gap structure, composition heterogeneity, symmetry tests | ✅ |
+| Alignment comparison (SP, TC, ensemble column confidence) | ✅ `msatk compare` |
+| Tree-based diagnostics (treeness/RCV, concordance factors, homoplasy, saturation) | ⬜ needs a tree input |
+| CAI (reference codon set), k-mer diversity | ⬜ |
 | Comparison against AMAS, AliStat, CIAlign, trimAl on shared metrics | 🟡 AMAS done (paper analysis); AliStat pending |
 
 ## Alignment families (capability registry)

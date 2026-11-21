@@ -97,6 +97,9 @@ Undefined values are written as empty CSV cells / JSON `null`, never as zero.
 | `annotations_found` | Format annotations preserved from the input (e.g. GC:SS_cons, insert_states, partitions). |  |  |  | all |
 | `specialized` | Nested summaries of the specialized analyses that apply to this input (see the levels below). |  |  |  | all |
 | `analysis_applicability` | For each specialized analysis, whether it ran and why or why not. |  |  |  | all |
+| `characterization` | Nested summaries of the characterization analyses that ran (levels below). |  |  |  | all |
+| `characterization_profile` | Metrics profile used (core, comprehensive, evolutionary, coevolution, all, none or custom). |  |  |  | all |
+| `characterization_applicability` | Why each characterization analysis ran or was skipped. |  |  |  | all |
 
 ## Sequence-level
 
@@ -126,7 +129,7 @@ Undefined values are written as empty CSV cells / JSON `null`, never as zero.
 | `unique_residue_count` | Distinct canonical residues observed in the row. |  |  |  | all |
 | `consensus_comparable_sites` | Columns where the row has a residue and the consensus is defined. |  |  |  | all |
 | `consensus_identity` | Fraction of comparable columns where the row matches the majority consensus. |  | [0, 1] | No comparable column. | all |
-| `composition_distance` | Total-variation distance between the row's residue composition and the pooled composition. | `0.5 * sum_c |p_c(row) - p_c(alignment)|` | [0, 1] |  | all |
+| `composition_distance` | Total-variation distance between the row's residue composition and the pooled composition. | `0.5 * sum_c \|p_c(row) - p_c(alignment)\|` | [0, 1] |  | all |
 | `duplicate_of` | Identifier of the first earlier row with an identical sequence, if any. |  |  |  | all |
 | `gc_content` | G+C fraction among canonical bases. |  |  |  | dna, rna, codon |
 | `gc_skew` | (G - C) / (G + C). |  |  |  | dna, rna, codon |
@@ -391,7 +394,7 @@ Undefined values are written as empty CSV cells / JSON `null`, never as zero.
 | `mean_read_length` | Mean read length. |  |  |  | all |
 | `n50_read_length` | Read-length N50. |  |  |  | all |
 | `mean_base_quality` | Mean Phred base quality. |  |  |  | all |
-| `median_insert_size` | Median |TLEN| of properly paired first mates. |  |  |  | all |
+| `median_insert_size` | Median \|TLEN\| of properly paired first mates. |  |  |  | all |
 | `mean_depth` | Length-weighted mean depth over references. |  |  | No @SQ lengths, or references too large. | all |
 | `breadth_1x` | Fraction of reference bases with depth ≥ 1. |  |  |  | all |
 | `breadth_10x` | Fraction of reference bases with depth ≥ 10. |  |  |  | all |
@@ -512,4 +515,400 @@ Undefined values are written as empty CSV cells / JSON `null`, never as zero.
 | `max_emission` | Largest emission probability. |  |  |  | all |
 | `entropy_bits` | Shannon entropy of emissions. |  |  |  | all |
 | `relative_entropy_bits` | Relative entropy vs COMPO. |  |  |  | all |
+
+## Completeness (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `alignment_completeness` | Fraction of all cells observed (AliStat Ca). *Observed = canonical residue; gaps, missing, ambiguity codes and padding are unobserved.* | `observed cells / (N L)` | 0-1 |  | all |
+| `min_sequence_completeness` | Lowest per-sequence completeness (AliStat Cr). |  | 0-1 |  | all |
+| `min_site_completeness` | Lowest per-column completeness (AliStat Cc). |  | 0-1 |  | all |
+| `sequence_completeness_quantiles` | Per-sequence completeness. Quantiles q05, q25, q50, q75, q95. |  |  |  | all |
+| `site_completeness_quantiles` | Per-column completeness. Quantiles q05, q25, q50, q75, q95. |  |  |  | all |
+| `min_pair_completeness_threshold` | Threshold used for pairs_below_threshold. |  |  |  | all |
+| `pair_completeness_method` | exact, or why pairwise overlap was not computed. |  |  |  | all |
+| `mean_pair_completeness` | Mean AliStat C_ij over pairs. Cost: O(N^2 L) time, O(N^2) memory; skipped above max_exact_sequences. | `C_ij = columns observed in both i and j / L` |  |  | all |
+| `min_pair_completeness` | Smallest C_ij: the least-overlapping pair. |  |  |  | all |
+| `pair_completeness_quantiles` | C_ij over all pairs. Quantiles q05, q25, q50, q75, q95. |  |  |  | all |
+| `pairs_below_threshold` | Pairs with C_ij below the threshold. |  |  |  | all |
+| `pairs_without_overlap` | Pairs sharing no observed column (distance undefined). |  |  |  | all |
+| `fraction_pairs_below_threshold` | pairs_below_threshold / pairs. |  |  |  | all |
+| `min_shared_sites` | Fewest columns observed in both sequences of any pair. |  |  |  | all |
+
+## Completeness (per sequence)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `sequence_id` | Sequence identifier. |  |  |  | all |
+| `sequence_completeness` | Observed columns / L (AliStat Cr). |  |  |  | all |
+| `least_overlapping_partner` | Sequence with the smallest C_ij to this one. |  |  |  | all |
+| `min_pair_completeness` | That smallest C_ij. |  |  |  | all |
+| `pairs_below_threshold` | Partners with C_ij below the threshold. |  |  |  | all |
+
+## Gap structure (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `gap_openings` | Internal gap runs (a run starts after a non-gap cell). *Terminal gaps (before the first / after the last non-gap cell) are counted separately, not as openings.* |  |  |  | all |
+| `gap_extensions` | Internal gap cells beyond the first of each run. | `internal_gap_cells - gap_openings` |  |  | all |
+| `internal_gap_cells` | Gap cells between a sequence's first and last non-gap cell. |  |  |  | all |
+| `terminal_gap_cells` | Gap cells before the first / after the last non-gap cell. |  |  |  | all |
+| `terminal_gap_fraction` | terminal_gap_cells / all gap cells. |  |  | no gaps | all |
+| `mean_gap_run_length` | Mean internal gap-run length. |  |  | no internal gaps | all |
+| `median_gap_run_length` | Median internal gap-run length. |  |  |  | all |
+| `max_gap_run_length` | Longest internal gap run. |  |  |  | all |
+| `single_site_gap_runs` | Internal gap runs of length 1. |  |  |  | all |
+| `longest_gap_free_block` | Longest run of columns containing no gap. |  |  |  | all |
+| `gap_free_blocks` | Number of maximal gap-free column runs. |  |  |  | all |
+| `longest_complete_block` | Longest run of columns observed in every sequence. |  |  |  | all |
+| `complete_blocks` | Number of maximal complete column runs. |  |  |  | all |
+| `distinct_column_gap_patterns` | Distinct gap-presence patterns among gapped columns. |  |  |  | all |
+| `distinct_sequence_gap_patterns` | Distinct gap-position sets among sequences. |  |  |  | all |
+| `mean_pairwise_gap_concordance` | Mean Jaccard similarity of gap positions over pairs. | `\|G_i ∩ G_j\| / \|G_i ∪ G_j\| (1 when neither has gaps)` | 0-1 |  | all |
+| `fragmentation_index` | Mean over sequences of 1 - longest observed segment / observed cells; 0 when every sequence is one contiguous block. |  | 0-1 |  | all |
+
+## Gap structure (per sequence)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `sequence_id` | Sequence identifier. |  |  |  | all |
+| `internal_gap_openings` | Internal gap runs. |  |  |  | all |
+| `internal_gap_extensions` | Internal gap cells beyond each run's first. |  |  |  | all |
+| `internal_gap_cells` | Internal gap cells. |  |  |  | all |
+| `terminal_gap_cells` | Terminal gap cells. |  |  |  | all |
+| `longest_internal_gap` | Longest internal gap run. |  |  |  | all |
+| `observed_segments` | Maximal runs of observed cells. |  |  |  | all |
+| `longest_observed_segment` | Longest such run. |  |  |  | all |
+| `fragmentation` | 1 - longest_observed_segment / observed cells. |  |  |  | all |
+| `gap_pattern_distance` | 1 - mean Jaccard similarity of this sequence's gap positions to every other sequence's. |  |  |  | all |
+| `gap_pattern_robust_z` | Robust z of gap_pattern_distance (median/MAD); large positive values mark unusual gap placement. |  |  | MAD = 0 | all |
+
+## Gap-run length distribution
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `run_length` | Internal gap-run length. |  |  |  | all |
+| `runs` | Runs of that length. |  |  |  | all |
+
+## Contiguous blocks
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `block_type` | gap_free (no gap in the column) or complete (all observed). |  |  |  | all |
+| `start` | First column (1-based). |  |  |  | all |
+| `end` | Last column (1-based, inclusive). |  |  |  | all |
+| `length` | Columns in the block. |  |  |  | all |
+
+## Redundancy and N_eff (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `identity_threshold` | Identity at or above which two sequences are neighbours. |  |  |  | all |
+| `min_overlap` | Neighbours' comparable sites must cover at least this fraction of the longer sequence's residues. |  |  |  | all |
+| `effective_sequences` | Effective number of sequences N_eff. Assumes: Identity over sites where both sequences have a residue. Cost: O(N^2 L) time, O(N^2) memory; skipped above max_exact_sequences. | `sum_i 1/n_i, n_i = neighbours of i (including i)` | 1-N |  | all |
+| `effective_sequence_fraction` | N_eff / N. |  | 0-1 |  | all |
+| `effective_sequences_per_site` | N_eff / L. |  |  |  | all |
+| `mean_neighbours` | Mean n_i. |  |  |  | all |
+| `max_neighbours` | Largest n_i. |  |  |  | all |
+| `clusters` | Connected components of the neighbour graph (single linkage). |  |  |  | all |
+| `largest_cluster` | Size of the largest cluster. |  |  |  | all |
+| `singleton_clusters` | Clusters with one sequence. |  |  |  | all |
+| `pairwise_identity_quantiles` | Pairwise identity. Quantiles q05, q25, q50, q75, q95. |  |  |  | all |
+
+## Sequence weights and clusters
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `sequence_id` | Sequence identifier. |  |  |  | all |
+| `neighbours` | n_i. |  |  |  | all |
+| `weight` | w_i = 1/n_i; weights sum to N_eff. |  |  |  | all |
+| `cluster` | Cluster label (0-based, first-seen order). |  |  |  | all |
+| `cluster_size` | Sequences in the cluster. |  |  |  | all |
+
+## Cluster size distribution
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `cluster_size` | Cluster size. |  |  |  | all |
+| `clusters` | Clusters of that size. |  |  |  | all |
+
+## Site diversity and patterns (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `distinct_site_patterns` | Distinct columns (all characters, gaps included). |  |  |  | all |
+| `site_pattern_ratio` | distinct_site_patterns / L. |  | 0-1 |  | all |
+| `repeated_pattern_sites` | L - distinct_site_patterns. |  |  |  | all |
+| `max_pattern_multiplicity` | Most frequent column pattern's count. |  |  |  | all |
+| `site_pattern_entropy` | Shannon entropy (bits) of the pattern frequency distribution. |  |  |  | all |
+| `mean_gini_simpson` | Mean over observed columns of 1 - sum p_c^2. *Canonical residues only.* |  |  |  | all |
+| `mean_effective_alphabet_size` | Mean 2^H over observed columns. |  |  |  | all |
+| `mean_weighted_entropy` | Mean column entropy with sequence weights w_i. |  |  | no exact pairwise identities | all |
+| `weighted` | Whether sequence weights were available. |  |  |  | all |
+| `sites_1_state` | Columns with one observed state. |  |  |  | all |
+| `sites_2_states` | Columns with two observed states. |  |  |  | all |
+| `sites_3_states` | Columns with three observed states. |  |  |  | all |
+| `sites_4plus_states` | Columns with four or more observed states. |  |  |  | all |
+| `singleton_minor_sites` | Variable columns whose non-majority states total 1. |  |  |  | all |
+| `doubleton_minor_sites` | Variable columns whose non-majority states total 2. |  |  |  | all |
+| `minor_count_3plus_sites` | Variable columns whose non-majority states total >= 3. |  |  |  | all |
+
+## Site diversity (per site)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `site_index` | Column (1-based). |  |  |  | all |
+| `simpson` | sum p_c^2. |  |  |  | all |
+| `gini_simpson` | 1 - sum p_c^2. |  |  |  | all |
+| `effective_alphabet_size` | 2^H. |  |  |  | all |
+| `weighted_entropy` | Entropy (bits) with sequence weights. |  |  |  | all |
+| `minor_state_count` | Observed residues not in the majority state. |  |  |  | all |
+| `pattern_multiplicity` | Columns sharing this column's pattern. |  |  |  | all |
+| `pattern_first_site` | First column with this pattern. |  |  |  | all |
+
+## Composition heterogeneity (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `rcv` | Relative composition variability (Phillips & Penny 2003). *Canonical residues only.* | `sum_c sum_i \|x_ic - mean_c\| / (N L)` |  |  | all |
+| `max_rcvt` | Largest per-sequence RCV contribution. |  |  |  | all |
+| `sequences_tested` | Sequences with at least one residue. |  |  |  | all |
+| `sequences_failing_composition_test` | Sequences with χ² p < alpha. |  |  |  | all |
+| `fraction_failing_composition_test` | Failing / tested. |  |  |  | all |
+| `alpha` | Significance level. |  |  |  | all |
+| `mean_composition_jsd` | Mean Jensen–Shannon divergence (bits) of sequence composition from the alignment composition. |  | 0-1 |  | all |
+| `max_composition_jsd` | Largest such divergence. |  |  |  | all |
+
+## Composition tests (per sequence)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `sequence_id` | Sequence identifier. |  |  |  | all |
+| `rcvt` | Per-sequence RCV contribution: sum_c \|x_ic - mean_c\| / (N L). |  |  |  | all |
+| `composition_chi2` | Pearson χ² of residue counts vs alignment frequencies. Assumes: Sites treated as independent; a screening test, as in IQ-TREE. |  |  |  | all |
+| `composition_df` | Degrees of freedom: observed states - 1. |  |  |  | all |
+| `composition_p` | χ² p-value. |  |  |  | all |
+| `composition_test_failed` | p < alpha. |  |  |  | all |
+| `composition_jsd` | Jensen–Shannon divergence (bits) from the alignment composition. |  |  |  | all |
+
+## Symmetry tests (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `pair_method` | exact (all pairs) or sampled. |  |  |  | all |
+| `pairs_tested` | Pairs tested. |  |  |  | all |
+| `pairs_total` | N(N-1)/2. |  |  |  | all |
+| `sample_seed` | Random seed when sampled. |  |  |  | all |
+| `alpha` | Significance level. |  |  |  | all |
+| `fraction_pairs_rejecting_bowker` | Pairs with Bowker p < alpha (rejecting symmetry: stationary, reversible, homogeneous evolution). Assumes: No multiple-testing correction; see Naser-Khdour et al. 2019. |  |  |  | all |
+| `fraction_pairs_rejecting_marginal` | Pairs with Stuart–Maxwell marginal symmetry p < alpha (rejecting stationarity). |  |  |  | all |
+| `fraction_pairs_rejecting_internal` | Pairs with internal symmetry p < alpha. |  |  |  | all |
+| `min_bowker_p` | Smallest Bowker p-value. |  |  |  | all |
+| `multiple_testing` | Multiple-testing note. |  |  |  | all |
+
+## Symmetry tests (per pair)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `sequence_a` | First sequence. |  |  |  | all |
+| `sequence_b` | Second sequence. |  |  |  | all |
+| `sites` | Sites where both carry a canonical residue (divergence-matrix total). |  |  |  | all |
+| `bowker` | Bowker statistic sum_{i<j} (n_ij - n_ji)^2 / (n_ij + n_ji). |  |  |  | all |
+| `bowker_df` | Off-diagonal pairs with n_ij + n_ji > 0. |  |  |  | all |
+| `bowker_p` | χ² p-value. |  |  |  | all |
+| `marginal` | Stuart–Maxwell statistic d' V^-1 d on the first k-1 margins. |  |  |  | all |
+| `marginal_df` | Rank of V. |  |  |  | all |
+| `marginal_p` | χ² p-value. |  |  |  | all |
+| `internal` | bowker - marginal. |  |  |  | all |
+| `internal_df` | bowker_df - marginal_df. |  |  |  | all |
+| `internal_p` | χ² p-value. |  |  | internal_df <= 0 | all |
+
+## Windowed statistics (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `window` | Window width (sites; a multiple of 3 for codon alignments). |  |  |  | all |
+| `step` | Step between window starts. |  |  |  | all |
+| `windows` | Number of windows. |  |  |  | all |
+| `most_variable_window` | Window with the highest variable_fraction. |  |  |  | all |
+| `gappiest_window` | Window with the highest gap_fraction. |  |  |  | all |
+| `highest_entropy_window` | Window with the highest mean_entropy. |  |  |  | all |
+| `windows_with_outlier_sequences` | Windows with at least one outlier sequence. |  |  |  | all |
+| `outlier_z_threshold` | Robust-z threshold for window outliers. |  |  |  | all |
+| `outlier_mad_floor` | Lower bound on the scaled MAD (identity units). |  |  |  | all |
+
+## Protein properties (per site)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `site_index` | Column (1-based). |  |  |  | all |
+| `hydropathy_sd` | SD of Kyte–Doolittle hydropathy over residues in the column. |  |  |  | all |
+| `volume_sd` | SD of residue volume (Zamyatnin 1972, Å^3). |  |  |  | all |
+| `charge_variance` | Variance of net charge (K, R +1; D, E -1; H +0.1). |  |  |  | all |
+| `polar_fraction` | Fraction of residues that are polar (STNQCYHKRDE). |  |  |  | all |
+| `substitutions_vs_consensus` | Residues differing from the column consensus. |  |  |  | all |
+| `conservative_substitutions` | Of those, BLOSUM62(residue, consensus) > 0. |  |  |  | all |
+| `radical_substitutions` | Of those, BLOSUM62(residue, consensus) < 0. |  |  |  | all |
+| `class_changes` | Of those, a change of residue class (hydrophobic, polar, positive, negative, special G/P/C). |  |  |  | all |
+| `radical_fraction` | radical / substitutions. |  |  |  | all |
+
+## Protein substitution scores (per sequence)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `sequence_id` | Sequence identifier. |  |  |  | all |
+| `mean_blosum62_to_consensus` | Mean BLOSUM62 score of residues vs the column consensus. |  |  |  | all |
+| `substitution_robust_z` | Robust z of that mean; strongly negative = unusually radical replacements. |  |  |  | all |
+| `radical_substitutions` | Radical substitutions in the sequence. |  |  |  | all |
+| `conservative_substitutions` | Conservative substitutions in the sequence. |  |  |  | all |
+
+## Protein properties (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `substitutions_vs_consensus` | Residues differing from their column consensus. |  |  |  | all |
+| `conservative_fraction` | BLOSUM62 > 0 share of those substitutions. |  |  |  | all |
+| `radical_fraction` | BLOSUM62 < 0 share. |  |  |  | all |
+| `neutral_fraction` | BLOSUM62 = 0 share. |  |  |  | all |
+| `class_change_fraction` | Share changing residue class. |  |  |  | all |
+| `median_hydropathy_sd` | Median column hydropathy SD. |  |  |  | all |
+| `sequences_with_substitution_z_below_minus_3_5` | Sequences with substitution robust z < -3.5. |  |  |  | all |
+
+## Codon evolution (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `genetic_code` | NCBI genetic code table. |  |  |  | all |
+| `codon_sites` | Codon columns (L / 3). |  |  |  | all |
+| `variable_codon_sites` | Codon columns with more than one complete, non-stop codon. |  |  |  | all |
+| `synonymous_only_codon_sites` | Variable codon columns whose codons all encode one amino acid. |  |  |  | all |
+| `nonsynonymous_codon_sites` | Variable codon columns with more than one amino acid. |  |  |  | all |
+| `effective_number_of_codons` | Wright's ENC from all complete codons. |  | 20-61 | a synonymous family class is unobserved | all |
+| `fourfold_sites` | Third positions whose consensus codon is four-fold degenerate. |  |  |  | all |
+| `fourfold_nucleotide_diversity` | Mean pairwise difference per four-fold site among codons sharing the consensus first two bases. |  |  |  | all |
+| `dnds_method` | Estimator used for dN and dS. |  |  |  | all |
+| `dnds_pair_method` | exact (all pairs) or sampled. |  |  |  | all |
+| `dnds_pairs` | Pairs evaluated. |  |  |  | all |
+| `dnds_pairs_defined` | Pairs with a defined dN/dS. |  |  |  | all |
+| `median_pairwise_dn_ds` | Median pairwise dN/dS. Assumes: Counting estimate between pairs; not a phylogenetic selection test. |  |  |  | all |
+| `mean_pairwise_ds` | Mean pairwise dS. |  |  |  | all |
+| `mean_pairwise_dn` | Mean pairwise dN. |  |  |  | all |
+| `dnds_pairs_saturated` | Pairs with p >= 0.75 (Jukes–Cantor undefined). |  |  |  | all |
+
+## Pairwise dN/dS
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `sequence_a` | First sequence. |  |  |  | all |
+| `sequence_b` | Second sequence. |  |  |  | all |
+| `codons` | Codons compared (complete, non-stop in both). |  |  |  | all |
+| `synonymous_sites` | S (Nei–Gojobori sites, averaged over the two sequences). |  |  |  | all |
+| `nonsynonymous_sites` | N = 3 codons - S. |  |  |  | all |
+| `synonymous_differences` | S_d. |  |  |  | all |
+| `nonsynonymous_differences` | N_d. |  |  |  | all |
+| `ps` | S_d / S. |  |  |  | all |
+| `pn` | N_d / N. |  |  |  | all |
+| `ds` | Jukes–Cantor corrected p_S. | `-3/4 ln(1 - 4 p_S / 3)` |  |  | all |
+| `dn` | Jukes–Cantor corrected p_N. |  |  |  | all |
+| `dn_ds` | dN / dS. |  |  | dS = 0, saturation, or < 10 codons | all |
+| `note` | Why a value is undefined. |  |  |  | all |
+
+## Coevolution (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `candidate_sites` | Columns analysed: variable, occupancy >= min_occupancy, the max_sites most entropic. |  |  |  | all |
+| `max_sites` | Cap on candidate columns. Cost: O(N (S k)^2) time. |  |  |  | all |
+| `min_occupancy` | Minimum fraction of sequences observed in a candidate column. |  |  |  | all |
+| `pseudocount` | lambda in p = (1 - lambda) f + lambda / q. |  |  |  | all |
+| `weighting` | Sequence weighting used. |  |  |  | all |
+| `effective_sequences` | Sum of weights. |  |  |  | all |
+| `min_separation` | Minimum column distance for reported pairs. |  |  |  | all |
+| `pairs` | Column pairs evaluated. |  |  |  | all |
+| `note` | Why no pairs were evaluated. |  |  |  | all |
+| `mean_mi` | Mean MI over evaluated pairs (bits). |  |  |  | all |
+| `max_mi_apc` | Largest APC-corrected MI. |  |  |  | all |
+| `top_pair` | Columns of the highest-ranked pair. |  |  |  | all |
+| `pairs_reported` | Rows in coevolution_pairs.csv. |  |  |  | all |
+
+## Coevolution (top column pairs)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `rank` | Rank by APC-corrected MI. |  |  |  | all |
+| `site_i` | First column (1-based). |  |  |  | all |
+| `site_j` | Second column (1-based). |  |  |  | all |
+| `mi` | Mutual information (bits). | `sum p(x,y) log2 p(x,y) / (p(x) p(y))` |  |  | all |
+| `mi_apc` | MI - MI(i,.) MI(.,j) / MI(.,.) (Dunn et al. 2008). |  |  |  | all |
+| `normalized_mi` | 2 MI / (H_i + H_j). |  | 0-1 |  | all |
+| `joint_entropy` | H(i, j) in bits. |  |  |  | all |
+| `conditional_entropy_j_given_i` | H(j \| i) = H(i, j) - H(i). |  |  |  | all |
+| `effective_pair_weight` | Weighted sequences with residues in both columns. |  |  |  | all |
+
+## Alignment comparison (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `pair_method` | exact (all sequence pairs) or sampled. |  |  |  | all |
+| `sequence_pairs` | Sequence pairs compared. |  |  |  | all |
+| `reference_residue_pairs` | Aligned residue pairs implied by the reference. |  |  |  | all |
+| `test_residue_pairs` | Aligned residue pairs implied by the test alignment. |  |  |  | all |
+| `shared_residue_pairs` | Pairs implied by both. |  |  |  | all |
+| `sp_score` | Sum-of-pairs score: shared / reference pairs (recall). |  | 0-1 |  | all |
+| `precision` | shared / test pairs. |  | 0-1 |  | all |
+| `f1` | Harmonic mean of SP and precision. |  |  |  | all |
+| `tc_score` | Total-column score: reference columns (>= 2 residues) reproduced exactly. |  | 0-1 |  | all |
+| `reference_columns` | Reference columns with at least two residues. |  |  |  | all |
+| `mean_column_agreement` | Mean column agreement over test columns. |  |  |  | all |
+| `columns_below_0_5_agreement` | Test columns with agreement < 0.5. |  |  |  | all |
+
+## Alignment comparison (per column)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `site_index` | Test-alignment column (1-based). |  |  |  | all |
+| `residue_pairs` | Residue pairs in the column (over compared sequence pairs). |  |  |  | all |
+| `agreement` | Fraction of those pairs also aligned in the other alignment. |  |  |  | all |
+
+## Alignment comparison (per sequence)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `sequence_id` | Sequence identifier. |  |  |  | all |
+| `pairs_recovered` | Fraction of the reference's residue pairs involving this sequence that the test alignment recovers. |  |  |  | all |
+
+## Alignment ensemble (summary)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `alternatives` | Alternative alignments compared. |  |  |  | all |
+| `mean_sp_vs_alternatives` | Mean SP of the test alignment against each alternative. |  |  |  | all |
+| `mean_tc_vs_alternatives` | Mean TC against each alternative. |  |  |  | all |
+| `mean_column_confidence` | Mean per-column confidence. |  |  |  | all |
+| `columns_below_0_5_confidence` | Columns with confidence < 0.5. |  |  |  | all |
+| `columns_fully_consistent` | Columns aligned identically in every alternative. |  |  |  | all |
+
+## Alignment ensemble (per column)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `site_index` | Test-alignment column (1-based). |  |  |  | all |
+| `confidence` | Mean column agreement over the alternatives. |  |  |  | all |
+| `min_agreement` | Lowest agreement with any alternative. |  |  |  | all |
+
+## Windowed statistics (per window)
+
+| Field | Definition | Formula | Range | Undefined when | Applies to |
+|---|---|---|---|---|---|
+| `window_start` | First column (1-based). |  |  |  | all |
+| `window_end` | Last column (inclusive). |  |  |  | all |
+| `sites` | Columns in the window. |  |  |  | all |
+| `occupancy` | Mean column occupancy. |  |  |  | all |
+| `gap_fraction` | Mean column gap fraction. |  |  |  | all |
+| `variable_fraction` | Fraction of variable columns. |  |  |  | all |
+| `parsimony_informative_fraction` | Fraction of parsimony-informative columns. |  |  |  | all |
+| `mean_entropy` | Mean column entropy (bits). |  |  |  | all |
+| `mean_consensus_identity` | Mean identity to the consensus in the window, over sequences with at least half the window observed. |  |  |  | all |
+| `outlier_sequences` | Sequences with window consensus-identity robust z < threshold. |  |  |  | all |
+| `gc_content` | GC fraction (nucleotides). |  |  |  | dna, rna, codon |
 

@@ -17,12 +17,14 @@ nav:
       - 5. ML representations: tutorials/05_ml_encodings.md
       - 6. RNA, profiles, partitions, pairs: tutorials/06_annotated_alignments.md
       - 7. Beyond MSAs: tutorials/07_beyond_msas.md
+      - 8. Characterization: tutorials/08_characterization.md
   - CLI: CLI.md
   - Python API: python_api.md
   - Outputs: outputs.md
   - Alignment Types: alignment_types.md
   - Format Compatibility: compatibility.md
   - Statistical Conventions: statistics.md
+  - Alignment Characterization: characterization.md
   - Metric Dictionary: metrics.md
   - Visualization: visualization.md
   - ML Encodings: ml_encodings.md

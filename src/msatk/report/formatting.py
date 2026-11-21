@@ -20,6 +20,11 @@ def format_value(value: object, key: str = "") -> str:
         return f"{value:,}"
     if isinstance(value, list):
         return "; ".join(str(v) for v in value)
+    if isinstance(value, dict):
+        return "; ".join(
+            f"{k} {v:.4g}" if isinstance(v, float) else f"{k} {format_value(v, str(k))}"
+            for k, v in value.items()
+        )
     return str(value)
 
 

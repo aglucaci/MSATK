@@ -14,6 +14,7 @@ re-runs them to keep them current.
 | 5 | [Machine-learning representations](05_ml_encodings.md) | Lossless encodings, ambiguity policies, windows with coordinates, PyTorch | Ras family |
 | 6 | [Alignments with extra structure](06_annotated_alignments.md) | RNA base-pair covariation, A3M profile states, partitions, pairwise alignments | Rfam tRNA (RF00005), toy files |
 | 7 | [Beyond multiple sequence alignments](07_beyond_msas.md) | Genome blocks, mapped reads, PAF hits, pangenome graphs, profile HMMs | toy files |
+| 8 | [Characterizing an alignment](08_characterization.md) | N_eff, pairwise overlap, windows, composition and symmetry tests, dN/dS, coevolution, alignment comparison | H3N2 HA, Ras, tRNA |
 
 ## Setup
 

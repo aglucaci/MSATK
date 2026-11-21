@@ -46,11 +46,13 @@ msatk profile alignment.fasta --preset comprehensive    # exact pairwise, PCA, S
 msatk profile alignment.fasta --plots png,svg,pdf --self-contained
 msatk profile alignment.fasta --pairwise sampled --sample-pairs 50000 --seed 1
 msatk profile alignment.fasta --embeddings umap --encodings onehot,features
+msatk profile alignment.fasta --metrics evolutionary   # + symmetry tests, codon dN/dS
 ```
 
 | Option | Meaning |
 |---|---|
 | `--preset basic\|standard\|comprehensive` | Computation profile (see below) |
+| `--metrics core\|comprehensive\|evolutionary\|coevolution\|all\|none` | Characterization analyses ([details](characterization.md)); default core, or the preset's |
 | `--pairwise auto\|exact\|sampled\|none` | Pairwise identity policy. `auto` = exact up to `--max-exact-sequences` (1000), deterministic sample of `--sample-pairs` (20,000) above |
 | `--plots png,svg,pdf,tiff\|none` | Figure formats. Unsupported formats are rejected |
 | `--no-alignment-figure` | Skip the residue-level overview and logo |
@@ -72,9 +74,9 @@ Presets:
 
 | Preset | Pairwise | Figures | Extras |
 |---|---|---|---|
-| `basic` | none | PNG, no alignment overview | — |
-| `standard` (default behaviour) | auto | PNG + alignment overview + logo | — |
-| `comprehensive` | exact | PNG + SVG | PCA embedding, categorical + one-hot tensors |
+| `basic` | none | PNG, no alignment overview | core metrics (N_eff skipped: no pairwise) |
+| `standard` (default behaviour) | auto | PNG + alignment overview + logo | core metrics |
+| `comprehensive` | exact | PNG + SVG | comprehensive metrics, PCA embedding, categorical + one-hot tensors |
 
 ## stats
 
@@ -126,10 +128,21 @@ ever resampled. `pad` rejects alignments larger than `--height` x `--width` unle
 (with `--order-reference ID`), `consensus_identity`, `gaps`, `cluster` or
 `file:PATH`. See [ML encodings](ml_encodings.md).
 
+## compare
+
+```bash
+msatk compare mafft.fasta --reference reference.fasta --out cmp/        # SP, TC, per column
+msatk compare mafft.fasta --alternatives muscle.fasta clustalo.fasta   # column confidence
+```
+
+See [Alignment characterization](characterization.md#alignment-confidence-msatk-compare).
+
 ## report, demo, metrics
 
 ```bash
 msatk report results/ --self-contained
 msatk demo
 msatk metrics --format json > metrics.json
+msatk metrics list --level redundancy
+msatk metrics describe effective_sequences
 ```

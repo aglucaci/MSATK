@@ -446,6 +446,14 @@ for _level in ("block", "read", "mapping", "graph", "profile_model"):
         *_DEFS[_level],
     ]
 
+from msatk.stats.registry_characterization import (  # noqa: E402
+    ALIGNMENT_DEFS,
+    CHAR_DEFS,
+)
+
+_DEFS["alignment"] = [*_DEFS["alignment"], *ALIGNMENT_DEFS]
+_DEFS.update(CHAR_DEFS)
+
 EXTENDED_LEVELS = tuple(k for k in _DEFS if k != "alignment")
 
 

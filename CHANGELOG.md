@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+Alignment characterization:
+
+- Characterization analyses in metric profiles (`msatk profile --metrics
+  core|comprehensive|evolutionary|coevolution|all|none`; core by default):
+  AliStat-style completeness and pairwise overlap; gap structure (openings,
+  extensions, terminal vs internal, run lengths, longest gap-free/complete blocks,
+  gap-pattern outliers); N_eff with sequence weights and clusters; site patterns and
+  weighted diversity; RCV, per-sequence χ² and JSD composition tests; Bowker,
+  Stuart–Maxwell and internal symmetry tests; windowed statistics with window
+  outliers; protein property variation and conservative/radical substitutions;
+  Nei–Gojobori dN/dS, ENC, four-fold site diversity; mutual information with APC.
+  Each analysis records why it ran or was skipped.
+- `msatk compare`: SP, precision, TC and per-column agreement against a reference,
+  or per-column confidence across alternative alignments.
+- `MSATK.characterize()` and `MSATK.compute(metrics=[...])`; `msatk metrics list` and
+  `msatk metrics describe NAME`. Metric definitions gain `assumptions` and `cost`.
+- Validation: hand-checked values; dN/dS reproduces Biopython NG86 under its stop
+  codon conventions; MI-APC recovers 10 of 10 top tRNA pairs as Rfam base pairs.
+
 ML export strategies:
 
 - `msatk encode --strategy native|tiles|pad` with `--height`/`--width` (Python:

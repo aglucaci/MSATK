@@ -28,11 +28,17 @@ downstream models.
   handled by one molecule-aware policy shared by every metric. Undefined values
   (all-gap columns, non-overlapping pairs) are reported as `null`, never as 0.
   Every output field is defined in a [metric dictionary](docs/metrics.md).
-- **Multi-resolution statistics.** 145 defined fields (alignment, sequence, site and pair level, including provenance): completeness, gap
+- **Multi-resolution statistics.** Defined fields (alignment, sequence, site and pair level, including provenance): completeness, gap
   structure, conservation, entropy/information content, composition and skews,
   consensus- and composition-based outlier scores, pairwise identity, and
   population-genetic statistics (π, Watterson's θ, Tajima's D, haplotype
   diversity, Ts/Tv) validated against scikit-allel.
+- **Alignment characterization.** AliStat-style completeness and pairwise overlap,
+  gap-run structure, effective number of sequences, site patterns, composition
+  heterogeneity (RCV, χ²) and Bowker/Stuart–Maxwell symmetry tests, windowed
+  outliers, protein property variation, Nei–Gojobori dN/dS and ENC, and
+  APC-corrected mutual information, in `core` → `all` profiles (`--metrics`).
+  `msatk compare` scores alignments against a reference (SP, TC) or alternatives.
 - **Scales by design.** Vectorised NumPy core; exact pairwise identity via blocked
   matrix products, with a size-aware policy (exact → seeded sampling → off).
 - **Interactive offline report.** Scrollable/zoomable residue viewer, clickable

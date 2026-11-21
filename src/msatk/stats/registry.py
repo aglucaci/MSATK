@@ -35,6 +35,8 @@ class MetricDefinition:
     value_range: str = ""
     applies_to: tuple[str, ...] = ALL
     undefined: str = ""
+    assumptions: str = ""
+    cost: str = ""
 
     def as_dict(self) -> dict[str, object]:
         data = asdict(self)
@@ -514,9 +516,11 @@ def metrics_markdown() -> str:
         "Undefined values are written as empty CSV cells / JSON `null`, never as zero.",
         "",
     ]
+    from msatk.stats.registry_characterization import CHAR_TITLES
     from msatk.stats.registry_extended import EXTENDED_LEVELS
 
     titles = {
+        **CHAR_TITLES,
         "pairwise_alignment": "Pairwise alignment (N = 2)",
         "substitution": "Protein substitution scores (summary)",
         "site_substitution": "Protein substitution scores (per site)",
@@ -550,9 +554,13 @@ def metrics_markdown() -> str:
             if m.level != level:
                 continue
             desc = m.description + (f" *{m.missing_policy}*" if m.missing_policy else "")
+            if m.assumptions:
+                desc += f" Assumes: {m.assumptions}"
+            if m.cost:
+                desc += f" Cost: {m.cost}"
             applies = "all" if m.applies_to == ALL else ", ".join(m.applies_to)
-            lines.append(
-                f"| `{m.name}` | {desc} | {m.formula and '`' + m.formula + '`'} | {m.value_range} | {m.undefined} | {applies} |"
-            )
+            cells = [desc, m.formula and "`" + m.formula + "`", m.value_range, m.undefined]
+            cells = [c.replace("|", "\\|") for c in cells]
+            lines.append(f"| `{m.name}` | {' | '.join(cells)} | {applies} |")
         lines.append("")
     return "\n".join(lines)

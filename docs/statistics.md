@@ -3,7 +3,9 @@
 MSATK reports statistics at four resolutions — **alignment**, **sequence**, **site**
 and **pair** — computed from one shared vectorised encoding so that every metric
 treats characters identically. Every field is defined in the
-[metric dictionary](metrics.md).
+[metric dictionary](metrics.md). Analyses beyond these base statistics (completeness,
+N_eff, heterogeneity and symmetry tests, windows, coevolution, dN/dS, alignment
+comparison) are described in [Alignment characterization](characterization.md).
 
 ## Character states
 

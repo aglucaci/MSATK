@@ -26,6 +26,9 @@ EPILOG = """examples:
   msatk logo alignment.fasta --start 1 --end 60 --out logo.pdf
   msatk encode alignment.fasta --strategy tiles --height 128 --width 256 --out ml/
   msatk image alignment.fasta --kind rgb --scale 4 --out alignment.png
+  msatk profile alignment.fasta --metrics evolutionary
+  msatk compare mafft.fasta --reference benchmark.fasta
+  msatk metrics describe effective_sequences
   msatk inspect genomes.maf.gz
   msatk profile reads.bam --out reads_qc/
   msatk profile cds.fasta --type codon --genetic-code 2
@@ -58,6 +61,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--preset", choices=["basic", "standard", "comprehensive"], default=None,
         help="Computation profile. basic: no pairwise matrix; comprehensive: exact pairwise, "
         "PCA embedding, SVG figures and ML tensors.",
+    )  # fmt: skip
+    profile.add_argument(
+        "--metrics", default=None,
+        choices=["core", "comprehensive", "evolutionary", "coevolution", "all", "none"],
+        help="Characterization profile. core: completeness, gap structure, N_eff; "
+        "comprehensive: + site patterns, composition heterogeneity, windows, protein "
+        "properties; evolutionary: + symmetry tests, codon dN/dS; coevolution: + mutual "
+        "information. Default: the preset's (core).",
     )  # fmt: skip
     profile.add_argument("--report", default="html", choices=["html", "none"])
     profile.add_argument(
@@ -272,9 +283,34 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument("--force", action="store_true")
     demo.set_defaults(func=cmd_demo)
 
-    metrics = sub.add_parser("metrics", help="Print the metric dictionary (Markdown or JSON).")
+    metrics = sub.add_parser(
+        "metrics",
+        help="Metric dictionary: list metrics, describe one, or print all (Markdown/JSON).",
+    )
+    metrics.add_argument(
+        "action", nargs="?", default="print", choices=["print", "list", "describe"],
+        help="print (default): the whole dictionary; list: names; describe NAME: one metric.",
+    )  # fmt: skip
+    metrics.add_argument("name", nargs="?", default=None, help="Metric name or level.name.")
+    metrics.add_argument("--level", default=None, help="Only metrics at this level.")
     metrics.add_argument("--format", default="markdown", choices=["markdown", "json"])
     metrics.set_defaults(func=cmd_metrics)
+
+    compare = sub.add_parser(
+        "compare",
+        help="Score an alignment against a reference (SP, TC) or alternative alignments "
+        "(per-column confidence).",
+    )
+    compare.add_argument("input", help="Test alignment.")
+    group = compare.add_mutually_exclusive_group(required=True)
+    group.add_argument("--reference", help="Trusted reference alignment of the same sequences.")
+    group.add_argument(
+        "--alternatives", nargs="+", help="Alternative alignments of the same sequences."
+    )
+    compare.add_argument("--format", default="auto")
+    compare.add_argument("--out", default=None, help="Directory for summary.json and tables.")
+    compare.add_argument("--seed", type=int, default=0)
+    compare.set_defaults(func=cmd_compare)
 
     inspect = sub.add_parser(
         "inspect",
@@ -376,6 +412,7 @@ def cmd_profile(args: argparse.Namespace) -> int:
             self_contained=args.self_contained,
             encodings=[e for e in args.encodings.split(",") if e] if args.encodings else None,
             preset=args.preset,
+            metrics=args.metrics,
         )
     except (MSATKError, ValueError, OSError) as exc:
         _print_error(exc)
@@ -660,12 +697,83 @@ def cmd_demo(args: argparse.Namespace) -> int:
 
 
 def cmd_metrics(args: argparse.Namespace) -> int:
-    from msatk.stats.registry import metric_dictionary, metrics_markdown
+    from msatk.stats.registry import METRICS, metric_dictionary, metrics_markdown
 
+    if args.action == "list":
+        rows = [m for m in METRICS if args.level in (None, m.level)]
+        if args.format == "json":
+            print(json.dumps([{"level": m.level, "name": m.name} for m in rows], indent=2))
+        else:
+            for m in rows:
+                print(f"{m.level}.{m.name}\t{m.description}")
+        return 0
+    if args.action == "describe":
+        if not args.name:
+            _print_error(ValueError("describe needs a metric name, e.g. effective_sequences"))
+            return 2
+        level, _, name = args.name.rpartition(".")
+        found = [m for m in METRICS if m.name == name and (not level or m.level == level)]
+        found = [m for m in found if args.level in (None, m.level)]
+        if not found:
+            _print_error(KeyError(f"Unknown metric {args.name!r}; see `msatk metrics list`."))
+            return 2
+        if args.format == "json":
+            print(json.dumps([m.as_dict() for m in found], indent=2))
+            return 0
+        for m in found:
+            print(f"{m.level}.{m.name}")
+            for key, value in m.as_dict().items():
+                if key not in ("name", "level") and value:
+                    print(f"  {key:15} {', '.join(value) if isinstance(value, list) else value}")
+        return 0
     if args.format == "json":
         print(json.dumps(metric_dictionary(), indent=2))
     else:
         print(metrics_markdown())
+    return 0
+
+
+def cmd_compare(args: argparse.Namespace) -> int:
+    from msatk.io.readers import read_sequence_alignment
+    from msatk.stats.consistency import compare_alignments, ensemble_agreement
+
+    try:
+        test, _ = read_sequence_alignment(args.input, fmt=args.format)
+        if args.reference:
+            ref, _ = read_sequence_alignment(args.reference, fmt="auto")
+            summary, tables = compare_alignments(test, ref, seed=args.seed)
+            keys = [
+                "sp_score",
+                "precision",
+                "tc_score",
+                "mean_column_agreement",
+                "columns_below_0_5_agreement",
+            ]
+        else:
+            alts = [read_sequence_alignment(a, fmt="auto")[0] for a in args.alternatives]
+            summary, tables = ensemble_agreement(test, alts, seed=args.seed)
+            keys = [
+                "alternatives",
+                "mean_sp_vs_alternatives",
+                "mean_tc_vs_alternatives",
+                "mean_column_confidence",
+                "columns_below_0_5_confidence",
+            ]
+    except (MSATKError, ValueError, OSError) as exc:
+        _print_error(exc)
+        return 2
+    for key in keys:
+        value = summary.get(key)
+        print(f"{key:30} {value:.4f}" if isinstance(value, float) else f"{key:30} {value}")
+    if args.out:
+        from msatk.io import write_csv, write_json
+
+        out = Path(args.out)
+        (out / "tables").mkdir(parents=True, exist_ok=True)
+        write_json(out / "summary.json", summary)
+        for name, rows in tables.items():
+            write_csv(out / "tables" / f"{name}.csv", rows)
+        print(f"Written to {out}/")
     return 0
 
 

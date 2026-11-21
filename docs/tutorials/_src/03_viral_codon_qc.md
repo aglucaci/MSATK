@@ -61,8 +61,8 @@ with gzip.open(datasets.path("h3n2_ha_hosts"), "rt") as handle:
     host = {r["accession"]: r["host_label"] for r in csv.DictReader(handle, delimiter="\t")}
 
 divergent = set(next(f for f in ha.qc_findings() if f.code == "DIVERGENT_SEQUENCES").items)
-print("all sequences:       ", dict(Counter(host.values())))
-print("flagged as divergent:", dict(Counter(host[a] for a in divergent)))
+print("all sequences:       ", dict(Counter(host.values()).most_common()))
+print("flagged as divergent:", dict(Counter(host[a] for a in divergent).most_common()))
 ```
 
 QC flags all the canine, avian and environmental sequences and most of the swine ones.

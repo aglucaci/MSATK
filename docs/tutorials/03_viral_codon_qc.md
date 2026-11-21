@@ -94,13 +94,13 @@ with gzip.open(datasets.path("h3n2_ha_hosts"), "rt") as handle:
     host = {r["accession"]: r["host_label"] for r in csv.DictReader(handle, delimiter="\t")}
 
 divergent = set(next(f for f in ha.qc_findings() if f.code == "DIVERGENT_SEQUENCES").items)
-print("all sequences:       ", dict(Counter(host.values())))
-print("flagged as divergent:", dict(Counter(host[a] for a in divergent)))
+print("all sequences:       ", dict(Counter(host.values()).most_common()))
+print("flagged as divergent:", dict(Counter(host[a] for a in divergent).most_common()))
 ```
 
 ```text
-all sequences:        {'swine': 10, 'human': 380, 'mallard duck': 1, 'gadwall duck': 1, 'blue-winged teal': 1, 'canine': 4, 'environment': 3}
-flagged as divergent: {'human': 11, 'canine': 4, 'swine': 6, 'environment': 3, 'gadwall duck': 1, 'blue-winged teal': 1, 'mallard duck': 1}
+all sequences:        {'human': 380, 'swine': 10, 'canine': 4, 'environment': 3, 'mallard duck': 1, 'gadwall duck': 1, 'blue-winged teal': 1}
+flagged as divergent: {'human': 11, 'swine': 6, 'canine': 4, 'environment': 3, 'gadwall duck': 1, 'blue-winged teal': 1, 'mallard duck': 1}
 ```
 
 QC flags all the canine, avian and environmental sequences and most of the swine ones.
