@@ -1,0 +1,32 @@
+########################################
+# Program: needle
+# Rundate: Thu 20 Nov 2026 12:00:00
+# Align_format: srspair
+# Report_file: tiny.needle
+########################################
+
+#=======================================
+#
+# Aligned_sequences: 2
+# 1: seqA
+# 2: seqB
+# Matrix: EBLOSUM62
+# Gap_penalty: 10.0
+# Extend_penalty: 0.5
+#
+# Length: 9
+# Identity:       6/9 (66.7%)
+# Similarity:     7/9 (77.8%)
+# Gaps:           2/9 (22.2%)
+# Score: 19.5
+#
+#
+#=======================================
+
+seqA               1 MKVLAAGIL      9
+                     |||  ||.|
+seqB               1 MKV--AGLL      7
+
+
+#---------------------------------------
+#---------------------------------------

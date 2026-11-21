@@ -1,93 +1,77 @@
 # Outputs
 
-Default profile output:
+`msatk profile` writes a predictable directory (output schema version **2.0**):
 
 ```text
 alignment_msatk/
-├── report.html
+├── report.html              # interactive offline dashboard
 ├── report.md
-├── summary.json
-├── parameters.yaml
-├── msatk.log
+├── summary.json             # alignment-level statistics + provenance
+├── metric_dictionary.json   # definition of every field
+├── qc_findings.json
 ├── qc_warnings.txt
+├── parameters.yaml          # complete run configuration
+├── run_manifest.json        # configuration, dependency versions, list of outputs
+├── msatk.log
+├── assets/
 ├── tables/
 │   ├── alignment_summary.csv
 │   ├── per_sequence_stats.csv
 │   ├── per_site_stats.csv
-│   ├── pairwise_identity_matrix.csv
-│   ├── distance_matrix.csv
 │   ├── composition_summary.csv
 │   ├── entropy_by_site.csv
-│   ├── sequence_embeddings.csv
-│   └── qc_flags.csv
-└── figures/
+│   ├── gap_blocks.csv
+│   ├── qc_findings.csv
+│   ├── qc_flags.csv
+│   ├── pairwise_identity_matrix.csv   # exact pairwise mode only
+│   ├── distance_matrix.csv            # exact pairwise mode only
+│   ├── pairwise_comparisons.csv       # exact pairwise mode only
+│   └── sequence_embeddings.csv        # only with --embeddings
+├── figures/                 # one file per requested format (png/svg/pdf/tiff)
+│   ├── alignment_overview.*
+│   ├── sequence_logo.*
+│   └── ...
+└── ml/                      # only with --encodings
 ```
 
-Codon alignments additionally include codon usage, RSCU, codon-position GC, codon-position entropy, translated amino-acid summaries, and stop codon reports.
+Specialized analyses add tables when they apply (see
+[Alignment types](alignment_types.md)): `site_substitution_scores.csv` (proteins),
+`rna_base_pairs.csv` (Stockholm `SS_cons`), `profile_states.csv` (A2M/A3M) and
+`partitions.csv` (charsets or `--partitions`). Their summaries are nested under
+`summary.json → specialized`, and `analysis_applicability` records why each analysis ran or
+was skipped.
 
-## Stable Table Schemas
+Block, read, mapping, graph and profile-HMM inputs produce a smaller directory:
+`summary.json` (statistics and provenance), `tables/*.csv` (for example `blocks.csv` and
+`genomes.csv`; `references.csv` and `mapq_histogram.csv`; `queries.csv` and `targets.csv`;
+`segments.csv` and `paths.csv`; `match_states.csv`), `metric_dictionary.json`,
+`report.md`, `report.html` and `run_manifest.json`. Intervals in these tables are 0-based
+and half-open.
 
-`per_sequence_stats.csv` columns:
+Codon alignments add codon usage, RSCU, codon-position GC and entropy, translated
+amino-acid summaries and stop-codon reports. Protein alignments add amino-acid,
+residue-class and hydrophobicity summaries.
 
-- `sequence_id`
-- `raw_length`
-- `ungapped_length`
-- `gap_count`
-- `gap_fraction`
-- `ambiguous_count`
-- `ambiguous_fraction`
-- `gc_content`
-- `unique_residue_count`
-- `mean_identity_to_others`
-- `outlier_score`
+## Conventions
 
-`per_site_stats.csv` columns:
+* Site coordinates are **1-based, inclusive** and refer to the input alignment.
+* Undefined values (e.g. entropy of an all-gap column, identity of non-overlapping
+  sequences) are empty CSV cells / JSON `null` — never zero.
+* Every column is defined in the [metric dictionary](metrics.md); the same
+  definitions ship with each run as `metric_dictionary.json`.
 
-- `site_index`
-- `dominant_character`
-- `dominant_character_frequency`
-- `gap_fraction`
-- `missing_fraction`
-- `entropy`
-- `conservation_score`
-- `observed_state_count`
-- `variable`
-- `parsimony_informative`
-- `singleton`
-- `codon_position`
+## Provenance
 
-Every run writes `summary.json`, `parameters.yaml`, and `msatk.log` with MSATK version, Python version, platform, detected format, detected molecule type, run parameters, and output schema version.
+`summary.json` and `run_manifest.json` record the input SHA-256, MSATK version,
+timestamp, Python version, platform, all parameters (including the pairwise policy
+and random seed) and installed dependency versions.
 
-## Supported Input Formats
+## Changes from schema 1.0
 
-MSATK supports common multiple-sequence and read-alignment formats:
-
-- FASTA and aligned FASTA
-- A3M
-- PHYLIP and relaxed PHYLIP
-- CLUSTAL
-- Stockholm
-- NEXUS matrix blocks
-- MAF
-- SAM
-- BAM
-- CRAM
-
-SAM/BAM/CRAM are treated as alignment-derived inputs: MSATK uses mapped reads and CIGAR operations to build profileable aligned records. SAM is parsed directly. BAM and CRAM require the optional `pysam` dependency.
-
-## Auto-Detection Fields
-
-MSATK automatically infers and writes these fields to `summary.json`, `tables/alignment_summary.csv`, and the report:
-
-- `detected_file_format`
-- `detected_molecule_type`
-- `alignment_length`
-- `sequence_lengths_consistent`
-- `length_divisible_by_three`
-- `appears_codon_aware`
-- `stop_codons_exist`
-- `stop_codon_count`
-- `internal_stop_codons_exist`
-- `frameshift_warnings_exist`
-- `frameshift_warning_count`
-- `translated_cds_mode`
+* `raw_length` was removed (it was neither the original nor the ungapped length).
+  Use `original_length`, `ungapped_length`, `aligned_width` and `span_*`.
+* `conserved_sites` no longer counts all-gap columns; see `unobserved_sites`.
+* `mean_identity_to_others` is null unless an exact pairwise matrix is computed;
+  `outlier_score` is now `1 - consensus_identity` (O(N·L), always available).
+* `codon_position` appears only for codon alignments; `gc_content` only for nucleotides.
+* Pairwise matrices and embeddings are no longer written unconditionally.

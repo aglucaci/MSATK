@@ -1,0 +1,14 @@
+!!NA_MULTIPLE_ALIGNMENT 1.0
+
+ tiny.msf  MSF: 10  Type: N  Check: 0000  ..
+
+ Name: seq1  Len: 10  Check: 0000  Weight: 1.00
+ Name: seq2  Len: 10  Check: 0000  Weight: 1.00
+ Name: seq3  Len: 10  Check: 0000  Weight: 1.00
+
+//
+
+           1                  10
+seq1       ATGCTAGCTA
+seq2       ATGCTAGTTA
+seq3       ATG.TAGCTA

@@ -2,19 +2,41 @@ site_name: MSATK
 site_description: Multiple Sequence Alignment Toolkit
 theme:
   name: material
-  logo: assets/msatk_logo.png
-  favicon: assets/msatk_logo.png
+  logo: assets/msatk_mark.png
+  favicon: assets/msatk_mark.png
 nav:
   - Home: index.md
   - Installation: installation.md
   - Quickstart: quickstart.md
+  - Tutorials:
+      - Overview: tutorials/index.md
+      - 1. Profile an alignment: tutorials/01_quickstart.md
+      - 2. Statistics in Python: tutorials/02_statistics_python.md
+      - 3. Viral codon QC: tutorials/03_viral_codon_qc.md
+      - 4. Protein families and figures: tutorials/04_protein_family_figures.md
+      - 5. ML representations: tutorials/05_ml_encodings.md
+      - 6. RNA, profiles, partitions, pairs: tutorials/06_annotated_alignments.md
+      - 7. Beyond MSAs: tutorials/07_beyond_msas.md
+      - 8. Characterization: tutorials/08_characterization.md
   - CLI: CLI.md
   - Python API: python_api.md
   - Outputs: outputs.md
-  - QC Warnings: qc_warnings.md
+  - Alignment Types: alignment_types.md
+  - Format Compatibility: compatibility.md
+  - Statistical Conventions: statistics.md
+  - Alignment Characterization: characterization.md
+  - Metric Dictionary: metrics.md
+  - Visualization: visualization.md
+  - ML Encodings: ml_encodings.md
+  - QC Findings: qc_warnings.md
+  - Benchmarks: benchmarks.md
   - Workflow Integration: workflow_integration.md
   - Conda Packaging: conda_packaging.md
   - Test Datasets: test_datasets.md
   - Contributing: contributing.md
   - Release Checklist: release_checklist.md
   - Roadmap: ROADMAP.md
+
+exclude_docs: |
+  tutorials/_src/
+  tutorials/build.py

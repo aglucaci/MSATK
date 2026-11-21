@@ -1,0 +1,9 @@
+# STOCKHOLM 1.0
+#=GF ID toy_hairpin
+s1 GGGAAACCCU
+s2 GGCAAAGCCU
+s3 CGGAAACCGU
+s4 GG-AAACCCU
+#=GC SS_cons <<<...>>>.
+#=GC RF xxxxxx.xxx
+//

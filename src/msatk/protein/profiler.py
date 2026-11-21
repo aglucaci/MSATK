@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from msatk.core.profiler import MSATK
 from msatk.io import write_csv
@@ -16,8 +17,10 @@ from msatk.protein.analysis import (
 class ProteinProfiler(MSATK):
     """Protein alignment profiler."""
 
-    def __init__(self, path: str | Path, sequence_type: str = "protein", fmt: str = "auto") -> None:
-        super().__init__(path, sequence_type=sequence_type, fmt=fmt)
+    def __init__(
+        self, path: str | Path, sequence_type: str = "protein", fmt: str = "auto", **kwargs: Any
+    ) -> None:
+        super().__init__(path, sequence_type=sequence_type, fmt=fmt, **kwargs)
 
     def amino_acid_composition(self) -> list[dict[str, object]]:
         return amino_acid_composition(self.alignment)

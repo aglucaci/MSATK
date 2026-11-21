@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from msatk.report.formatting import format_value
+
 
 def render_markdown_report(
     summary: dict[str, object],
@@ -26,11 +28,28 @@ def render_markdown_report(
         "| Metric | Value |",
         "| --- | --- |",
     ]
+    nested = {"specialized", "characterization"}
     lines.extend(
-        f"| {key.replace('_', ' ').title()} | {_format_value(value)} |"
+        f"| {key.replace('_', ' ').title()} | {format_value(value, key)} |"
         for key, value in summary.items()
-        if key not in {"interpretation", "recommended_next_steps"}
+        if key not in {"interpretation", "recommended_next_steps", *nested}
     )
+    for key in ("specialized", "characterization"):
+        groups = summary.get(key) or {}
+        if not isinstance(groups, dict) or not groups:
+            continue
+        lines.extend(["", f"## {key.title()} analyses", ""])
+        for name, values in groups.items():
+            lines.extend(
+                [
+                    f"### {name.replace('_', ' ').capitalize()}",
+                    "",
+                    "| Metric | Value |",
+                    "| --- | --- |",
+                ]
+            )
+            lines.extend(f"| `{k}` | {format_value(v, k)} |" for k, v in (values or {}).items())
+            lines.append("")
     lines.extend(["", "## QC Warnings", ""])
     lines.extend(f"- {warning}" for warning in warnings)
     lines.extend(["", "## Recommended Next Steps", ""])
@@ -42,11 +61,3 @@ def render_markdown_report(
         lines.append("No figures were generated in this run.")
     lines.append("")
     return "\n".join(lines)
-
-
-def _format_value(value: object) -> str:
-    if isinstance(value, float):
-        if 0 <= value <= 1:
-            return f"{value:.1%}"
-        return f"{value:.6g}"
-    return str(value)

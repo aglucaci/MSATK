@@ -1,0 +1,16 @@
+#NEXUS
+BEGIN DATA;
+  DIMENSIONS NTAX=4 NCHAR=12;
+  FORMAT DATATYPE=DNA MISSING=? GAP=-;
+  MATRIX
+    t1 ATGAAACCCGGG
+    t2 ATGAAACCCGGA
+    t3 ATGCAACCTGGG
+    t4 ATG---CCCGGG
+  ;
+END;
+BEGIN SETS;
+  charset geneA = 1-6;
+  charset geneB = 7-12;
+  charset pos3 = 3-12\3;
+END;

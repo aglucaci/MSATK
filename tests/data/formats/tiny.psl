@@ -1,0 +1,6 @@
+psLayout version 3
+
+match	mis-	rep.	N's	Q gap	Q gap	T gap	T gap	strand	Q	Q	Q	Q	T	T	T	T	block	blockSizes	qStarts	tStarts
+--------------------------------------------------------------------------------
+95	3	2	0	1	4	1	2	+	q1	120	10	114	t1	1000	200	306	3	50,30,20,	10,64,94,	200,252,286,
+40	10	0	0	0	0	0	0	-	q2	60	5	55	t1	1000	700	750	1	50,	5,	700,

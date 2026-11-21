@@ -1,0 +1,13 @@
+#FormatVersion Mauve1
+#Sequence1File	genomeA.fa
+#Sequence2File	genomeB.fa
+> 1:1-10 + genomeA.fa
+ACGTACGTAC
+> 2:101-110 - genomeB.fa
+ACGTACGAAC
+=
+> 1:11-18 + genomeA.fa
+GGGCCCAA
+> 2:0-0 + genomeB.fa
+--------
+=
