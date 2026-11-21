@@ -109,14 +109,22 @@ Themes: `nucleotide`, `nucleotide_cvd` (colour-vision-deficiency safe), `protein
 
 ```bash
 msatk encode alignment.fasta --encoding onehot --out ml/
-msatk encode alignment.fasta --encoding onehot --ambiguity fractional --window 256 --stride 128 --out ml/
+msatk encode alignment.fasta --strategy tiles --height 128 --width 256 --out ml/
+msatk encode alignment.fasta --strategy pad --height 512 --width 2048 --out ml/   # error if larger
+msatk encode alignment.fasta --strategy tiles --width 256 --stride 128 --order cluster --out ml/
+msatk encode cds.fasta --type codon --strategy tiles --width 255 --out ml/      # width % 3 == 0
+msatk encode alignment.fasta --encoding rgb --strategy tiles --height 224 --width 224 --out ml/
 msatk encode proteins.faa --encoding physicochemical --label family=PF00001 --out ml/
 msatk image alignment.fasta --kind rgb --scale 4 --out alignment.png
 msatk image alignment.fasta --kind label --out alignment_labels.png
 msatk image alignment.fasta --size 224x224 --out alignment_224.png   # lossy, recorded in manifest
 ```
 
-See [ML encodings](ml_encodings.md).
+`--strategy` is `native` (default without `--width`), `tiles` or `pad`; nothing is
+ever resampled. `pad` rejects alignments larger than `--height` x `--width` unless
+`--overflow crop` is given (recorded as lossy). `--order` is `input`, `reference`
+(with `--order-reference ID`), `consensus_identity`, `gaps`, `cluster` or
+`file:PATH`. See [ML encodings](ml_encodings.md).
 
 ## report, demo, metrics
 

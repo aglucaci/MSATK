@@ -3,8 +3,9 @@
 # 5. Machine-learning representations
 
 **You will:** turn an alignment into tensors, check that the encoding loses nothing,
-handle ambiguity codes deliberately, cut fixed-size windows that keep their original
-coordinates, save everything with a manifest, and feed it to a PyTorch `DataLoader`.
+handle ambiguity codes deliberately, make alignments of different sizes model-ready
+without resizing them, record the row order, and feed the result to a PyTorch
+`DataLoader`.
 
 **Data:** the Ras-family seed alignment and a small nucleotide example.
 
@@ -96,56 +97,123 @@ With `fractional`, `R` becomes half A and half G, and `N` is spread evenly over 
 four bases. With `separate`, ambiguity codes get their own channel. Every cell sums to 1
 under all three policies.
 
-## Fixed-size windows that keep their coordinates
+## Alignments of different sizes
 
-Biological alignments must not be resized, rotated or interpolated like photographs.
-MSATK instead cuts them into whole-cell windows, pads the last window, and records
-where each window came from.
+Alignments come in different sizes, but many models batch fixed-size inputs.
+MSATK never resizes an alignment, because that would merge or duplicate residues.
+Instead it offers three export strategies:
+
+* `native` keeps the whole alignment at its own size;
+* `tiles` cuts it into fixed-size tiles that together cover every cell;
+* `pad` pads it to one fixed size, and refuses if it does not fit.
+
+The Ras alignment is 60 sequences × 229 sites:
 
 ```python
-export = ras.export_encoding("ml", encoding="onehot", window=64, stride=32,
-                             rows_per_tile=32, stem="ras")
 import json
-manifest = json.loads(open("ml/ras_onehot.manifest.json").read())
-print("shape:", manifest["shape"], "axes:", manifest["axes"])
-print("lossless:", manifest["lossless"], "| ambiguity:", manifest["encoding_details"]["ambiguity_policy"])
-for tile in manifest["windowing"]["tiles"][5:8]:
+
+for kw in [dict(strategy="native"),
+           dict(strategy="tiles", height=32, width=64),
+           dict(strategy="pad", height=64, width=256)]:
+    info = ras.export_encoding("ml", encoding="onehot", stem=f"ras_{kw['strategy']}", **kw)
+    m = json.loads(open(info["manifest"]).read())
+    print(f"{kw['strategy']:7} shape {tuple(info['shape'])!s:20} padded cells: "
+          f"{m['strategy'].get('padded_cells', 0)}")
+```
+
+```text
+native  shape (60, 229, 22)        padded cells: 0
+tiles   shape (8, 32, 64, 22)      padded cells: 2644
+pad     shape (1, 64, 256, 22)     padded cells: 2644
+```
+
+A target smaller than the alignment is an error, unless you explicitly accept cropping:
+
+```python
+try:
+    ras.export_encoding("ml", strategy="pad", height=32, width=128)
+except ValueError as err:
+    print(err)
+```
+
+```text
+Alignment is 60 x 229 (sequences x sites), larger than the pad target 32 x 128. Use strategy 'tiles' to keep every cell, or overflow='crop' (--overflow crop) to keep only the first 32 rows and 128 sites.
+```
+
+## Tiles keep their coordinates
+
+Each tile records the original rows and sites it came from, and the `mask` marks real
+cells (True) and padding (False):
+
+```python
+manifest = json.loads(open("ml/ras_tiles_onehot.manifest.json").read())
+print("axes:", manifest["axes"], "| tiles:", manifest["windowing"]["n_tiles"])
+for tile in manifest["windowing"]["tiles"][2:5]:
     print(tile)
 ```
 
 ```text
-shape: [14, 32, 64, 22] axes: ['tile', 'sequence', 'site', 'channel']
-lossless: False | ambiguity: missing
-{'tile': 5, 'row_start': 0, 'row_end': 31, 'site_start': 161, 'site_end': 224, 'valid_rows': 32, 'valid_sites': 64}
-{'tile': 6, 'row_start': 0, 'row_end': 31, 'site_start': 193, 'site_end': 229, 'valid_rows': 32, 'valid_sites': 37}
-{'tile': 7, 'row_start': 32, 'row_end': 59, 'site_start': 1, 'site_end': 64, 'valid_rows': 28, 'valid_sites': 64}
+axes: ['tile', 'sequence', 'site', 'channel'] | tiles: 8
+{'tile': 2, 'row_start': 0, 'row_end': 31, 'site_start': 129, 'site_end': 192, 'valid_rows': 32, 'valid_sites': 64}
+{'tile': 3, 'row_start': 0, 'row_end': 31, 'site_start': 193, 'site_end': 229, 'valid_rows': 32, 'valid_sites': 37}
+{'tile': 4, 'row_start': 32, 'row_end': 59, 'site_start': 1, 'site_end': 64, 'valid_rows': 28, 'valid_sites': 64}
 ```
 
-The NPZ file holds `x` (the tiles), `mask` (True for real cells, False for padding) and
-`tiles` (the original row and site range of each tile). The manifest also records the
-input SHA-256, the vocabulary and the transforms applied.
+The NPZ file holds `x` (the tiles), `mask` and `tiles` (the original row and site range
+of each tile). The manifest also records the input SHA-256, the vocabulary, the row
+order and the transforms applied.
+
+## Row order is a modelling choice
+
+The order of sequences changes what a convolutional model sees. MSATK records the
+ordering it used. Here, sequences are clustered by p-distance, so similar sequences
+sit next to each other:
+
+```python
+info = ras.export_encoding("ml", encoding="onehot", strategy="tiles", height=32, width=64,
+                           order="cluster", stem="ras_clustered")
+manifest = json.loads(open(info["manifest"]).read())
+print(manifest["row_order"])
+print("first rows:", manifest["sequence_ids"][:4])
+```
+
+```text
+{'method': 'cluster', 'linkage': 'average (UPGMA)', 'distance': 'p-distance over sites where both sequences have a residue', 'undefined_distances_set_to': 1.0, 'pairs_with_undefined_distance': 0, 'computed_on': 'full alignment (before any site cropping)'}
+first rows: ['GSP1_YEAST/14-172', 'A8BS62_GIAIC/8-183', 'RAB9A_CANLF/9-174', 'RAB7A_CANLF/10-175']
+```
+
+Other orders are `reference` (identity to a chosen sequence), `consensus_identity`,
+`gaps` and `file:PATH` (your own list). For codon alignments, tile widths and strides
+must be multiples of 3, so every tile starts on a codon boundary.
 
 ## Feeding a model
 
-`AlignmentTensorDataset` returns NumPy arrays, so it works with any framework:
+`AlignmentTensorDataset` returns NumPy arrays, so it works with any framework. Exports
+with the same tile size, even from alignments of different sizes, can be combined into
+one dataset:
 
 ```python
 import torch
 from torch.utils.data import DataLoader
 from msatk.ml.datasets import AlignmentTensorDataset, to_torch
 
-ds = AlignmentTensorDataset("ml/ras_onehot.npz", channels_first=True)
+ds = AlignmentTensorDataset(["ml/ras_tiles_onehot.npz", "ml/ras_clustered_onehot.npz"],
+                            channels_first=True)
 loader = DataLoader(ds, batch_size=4, shuffle=False,
-                    collate_fn=lambda b: {k: torch.stack([to_torch(i[k]) for i in b]) for k in b[0]})
+                    collate_fn=lambda b: {k: torch.stack([to_torch(i[k]) for i in b])
+                                          for k in ("x", "mask", "tile")})
 batch = next(iter(loader))
-print({k: tuple(v.shape) for k, v in batch.items()})
+print(len(ds), "tiles;", {k: tuple(v.shape) for k, v in batch.items()})
 print("padding cells in first batch:", int((~batch["mask"]).sum()))
 ```
 
 ```text
-{'x': (4, 22, 32, 64), 'mask': (4, 32, 64), 'tile': (4, 4)}
-padding cells in first batch: 0
+16 tiles; {'x': (4, 22, 32, 64), 'mask': (4, 32, 64), 'tile': (4, 4)}
+padding cells in first batch: 864
 ```
+
+For models that accept variable input sizes, export `native` tensors and pad each batch
+to its largest member with `msatk.ml.pad_batch` (use it as the `collate_fn`).
 
 ## Images
 
@@ -171,13 +239,13 @@ label shape [60, 229] pixels per cell 1 lossless True
 
 ```bash
 msatk datasets ras_pf00071 --out data
-msatk encode data/ras_pf00071.sto.gz --encoding onehot --window 64 --stride 32 --out ml_cli
+msatk encode data/ras_pf00071.sto.gz --strategy tiles --height 32 --width 64 --order cluster --out ml_cli
 msatk image data/ras_pf00071.sto.gz --kind label --out labels.png
 ```
 
 ```text
 data/ras_pf00071.sto.gz
-MSATK tensor written: ml_cli/alignment_onehot.npz shape=(7, 60, 64, 22)
+MSATK tensor written: ml_cli/alignment_onehot.npz shape=(8, 32, 64, 22) strategy=tiles lossless=False
 Manifest: ml_cli/alignment_onehot.manifest.json
 MSATK image written: labels.png shape=(60, 229)
 ```

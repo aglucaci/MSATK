@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+ML export strategies:
+
+- `msatk encode --strategy native|tiles|pad` with `--height`/`--width` (Python:
+  `export_tensor(..., strategy=, height=, width=)`). Tiles cover every cell and record
+  their coordinates; `pad` rejects alignments larger than the target unless
+  `--overflow crop`, which is recorded as lossy. Nothing is resampled. `--window` and
+  `rows_per_tile` remain as older names.
+- Recorded row order (`--order input|reference|consensus_identity|gaps|cluster|file:PATH`).
+- Codon alignments: tile widths, strides and start must keep the reading frame.
+- `rgb` encoding (3-channel uint8 tiles for RGB-pretrained models, marked lossy).
+- `AlignmentTensorDataset` accepts several exports with the same tile shape;
+  `pad_batch` collates native exports of different sizes with masks.
+
 Logo:
 
 - New logo (v4), drawn reproducibly by `logo/make_logo.py` as SVG and PNG, with dark

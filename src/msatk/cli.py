@@ -24,7 +24,7 @@ EPILOG = """examples:
   msatk qc alignment.fasta --max-gap-seq 0.3 --max-gap-site 0.5
   msatk plot alignment.fasta --start 1 --end 300 --out region.svg
   msatk logo alignment.fasta --start 1 --end 60 --out logo.pdf
-  msatk encode alignment.fasta --encoding onehot --window 256 --stride 128 --out ml/
+  msatk encode alignment.fasta --strategy tiles --height 128 --width 256 --out ml/
   msatk image alignment.fasta --kind rgb --scale 4 --out alignment.png
   msatk inspect genomes.maf.gz
   msatk profile reads.bam --out reads_qc/
@@ -176,18 +176,47 @@ def build_parser() -> argparse.ArgumentParser:
     encode.add_argument(
         "--encoding",
         default="onehot",
-        choices=["categorical", "onehot", "physicochemical", "features"],
+        choices=["categorical", "onehot", "physicochemical", "features", "rgb"],
+        help="rgb = 3-channel display colours for RGB-pretrained models (lossy).",
     )
     encode.add_argument(
         "--ambiguity", default="missing", choices=["missing", "fractional", "separate"]
     )
+    encode.add_argument("--theme", default="auto", help="Colour theme for --encoding rgb.")
     encode.add_argument("--start", type=int, default=None)
     encode.add_argument("--end", type=int, default=None)
     encode.add_argument(
-        "--window", type=int, default=None, help="Tile width in sites (no resampling)."
+        "--strategy",
+        default=None,
+        choices=["native", "tiles", "pad"],
+        help="native: full alignment; tiles: fixed-size tiles covering every cell; "
+        "pad: one fixed-size tensor. Default: tiles if --width is given, else native.",
     )
-    encode.add_argument("--stride", type=int, default=None)
-    encode.add_argument("--rows-per-tile", type=int, default=None)
+    encode.add_argument(
+        "--height", type=int, default=None, help="Rows (sequences) per tile or pad target."
+    )
+    encode.add_argument(
+        "--width", type=int, default=None, help="Sites per tile or pad target (no resampling)."
+    )
+    encode.add_argument("--stride", type=int, default=None, help="Site step between tiles.")
+    encode.add_argument("--row-stride", type=int, default=None, help="Row step between tiles.")
+    encode.add_argument(
+        "--overflow",
+        default="error",
+        choices=["error", "crop"],
+        help="pad: what to do when the alignment is larger than the target (crop is lossy).",
+    )
+    encode.add_argument(
+        "--order",
+        default="input",
+        help="Row order: input, reference, consensus_identity, gaps, cluster, or file:PATH "
+        "with one sequence ID per line.",
+    )
+    encode.add_argument(
+        "--order-reference", default=None, help="Reference sequence ID for --order reference."
+    )
+    encode.add_argument("--window", type=int, default=None, help=argparse.SUPPRESS)
+    encode.add_argument("--rows-per-tile", type=int, default=None, help=argparse.SUPPRESS)
     encode.add_argument(
         "--label",
         action="append",
@@ -485,15 +514,26 @@ def cmd_encode(args: argparse.Namespace) -> int:
             ambiguity=args.ambiguity,
             start=args.start,
             end=args.end,
-            window=args.window,
+            strategy=args.strategy,
+            height=args.height,
+            width=args.width,
             stride=args.stride,
+            row_stride=args.row_stride,
+            overflow=args.overflow,
+            order=args.order,
+            order_reference=args.order_reference,
+            theme=args.theme,
+            window=args.window,
             rows_per_tile=args.rows_per_tile,
             labels=labels,
         )
     except (MSATKError, ValueError, OSError) as exc:
         _print_error(exc)
         return 2
-    print(f"MSATK tensor written: {info['tensor']} shape={tuple(info['shape'])}")
+    print(
+        f"MSATK tensor written: {info['tensor']} shape={tuple(info['shape'])} "
+        f"strategy={info['strategy']} lossless={info['lossless']}"
+    )
     print(f"Manifest: {info['manifest']}")
     return 0
 

@@ -25,7 +25,7 @@ from msatk.encoding.vocab import Vocabulary, ambiguity_expansion, full_vocabular
 from msatk.models import Alignment, SequenceRecord
 from msatk.stats.site import site_arrays
 
-ENCODINGS = ("categorical", "onehot", "physicochemical", "features")
+ENCODINGS = ("categorical", "onehot", "physicochemical", "features", "rgb")
 AMBIGUITY_POLICIES = ("missing", "fractional", "separate")
 
 
@@ -257,4 +257,8 @@ def encode(
         return physicochemical(alignment, molecule_type)
     if encoding == "features":
         return feature_channels(alignment, molecule_type)
+    if encoding == "rgb":
+        from msatk.encoding.images import rgb_tensor
+
+        return rgb_tensor(alignment, molecule_type, **kwargs)  # type: ignore[arg-type]
     raise ValueError(f"Unknown encoding {encoding!r}; choose from {ENCODINGS}.")

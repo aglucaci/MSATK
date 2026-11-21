@@ -23,7 +23,7 @@ msa.plot_logo("logo.pdf", start=1, end=60)
 # Machine learning
 tensor = msa.to_tensor("onehot")              # EncodedTensor (.array, .channels, .ids)
 msa.to_image("alignment.png", kind="label")
-msa.export_encoding("ml/", encoding="onehot", window=256)
+msa.export_encoding("ml/", encoding="onehot", strategy="tiles", height=128, width=256)
 
 # Reports
 msa.report("report.html")                     # interactive, single file

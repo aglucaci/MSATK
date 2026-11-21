@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from msatk.encoding.tensors import categorical
+from msatk.encoding.tensors import EncodedTensor, categorical
 from msatk.models import Alignment
 from msatk.viz.themes import OTHER_COLOR, hex_to_rgb, load_theme
 
@@ -47,6 +47,35 @@ def rgb_image(
     if scale > 1:
         img = np.repeat(np.repeat(img, scale, axis=0), scale, axis=1)
     return img
+
+
+def rgb_tensor(
+    alignment: Alignment,
+    molecule_type: str,
+    theme: str | dict[str, str] | Path | None = "auto",
+) -> EncodedTensor:
+    """``(N, L, 3)`` uint8 RGB tensor (one pixel per cell) for RGB-pretrained models.
+
+    The colours are display labels, not measurements: two residues with similar
+    colours are not biologically similar, and residues sharing a colour in the
+    theme become indistinguishable. Use ``onehot`` for scientific work.
+    """
+
+    img = rgb_image(alignment, molecule_type, theme=theme, scale=1)
+    return EncodedTensor(
+        array=img,
+        encoding="rgb",
+        channels=["R", "G", "B"],
+        ids=alignment.ids,
+        molecule_type=molecule_type,
+        lossless=False,
+        details={
+            "theme": theme if isinstance(theme, str) or theme is None else "custom",
+            "pixels_per_cell": 1,
+            "note": "RGB colours are arbitrary display labels; symbols that share a colour "
+            "cannot be told apart. Provided for compatibility with RGB-pretrained models.",
+        },
+    )
 
 
 def label_image(alignment: Alignment, molecule_type: str) -> tuple[np.ndarray, list[str]]:

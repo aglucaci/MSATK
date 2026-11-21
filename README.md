@@ -42,7 +42,8 @@ downstream models.
   annotation tracks, sequence logos, custom colour themes; PNG/SVG/PDF/TIFF.
 - **ML-ready representations.** Lossless categorical encodings, one-hot with
   explicit ambiguity policies, physicochemical and QC feature channels,
-  coordinate-preserving windows with padding masks, RGB/label images — each with
+  native, tiled or padded exports with masks and recorded row order (never
+  resampled), RGB/label images — each with
   a `manifest.json`, plus NumPy/PyTorch/TensorFlow dataset adapters.
 
 ## Quick Start
@@ -267,7 +268,7 @@ msatk stats alignment.fasta --level site > sites.csv          # summary|site|seq
 msatk qc alignment.fasta
 msatk plot alignment.fasta --start 1 --end 300 --out region.svg
 msatk logo alignment.fasta --start 1 --end 60 --out logo.pdf
-msatk encode alignment.fasta --encoding onehot --window 256 --stride 128 --out ml/
+msatk encode alignment.fasta --strategy tiles --height 128 --width 256 --out ml/
 msatk image alignment.fasta --kind rgb --scale 4 --out alignment.png
 msatk embed alignment.fasta --method pca
 msatk codon cds_alignment.fasta
@@ -318,7 +319,7 @@ msa.plot_logo("logo.pdf", start=1, end=60)
 
 tensor = msa.to_tensor("onehot")             # .array is a NumPy (N, L, C) array
 msa.to_image("alignment.png", kind="label")  # lossless label image + manifest
-msa.export_encoding("ml/", encoding="onehot", window=256)
+msa.export_encoding("ml/", encoding="onehot", strategy="tiles", height=128, width=256)
 
 msa.report("report.html")                    # interactive single-file report
 ```
